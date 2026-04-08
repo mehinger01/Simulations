@@ -1,3 +1,6 @@
+Here is your **full `index.html` with ONLY the tracking changes added** (nothing else modified):
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -380,7 +383,10 @@
               Explore charge buildup, electric fields, and lightning behavior through an interactive visual model.
             </p>
             <div class="tool-links">
-              <a class="tool-link primary" href="C2 L10 Lightning.html">Launch Tool</a>
+              <a class="tool-link primary" href="C2 L10 Lightning.html"
+                 onclick="gtag('event','open_simulation',{simulation:'Lightning'});">
+                Launch Tool
+              </a>
               <a class="tool-link" href="#">Teacher Notes</a>
             </div>
           </article>
@@ -392,7 +398,10 @@
               Help students connect motion, position-time graphs, velocity, and acceleration through interactive controls.
             </p>
             <div class="tool-links">
-              <a class="tool-link primary" href="P5 L8 Wave Interference vs4_5.html">Launch Tool</a>
+              <a class="tool-link primary" href="P5 L8 Wave Interference vs4_5.html"
+                 onclick="gtag('event','open_simulation',{simulation:'Motion Graph Explorer'});">
+                Launch Tool
+              </a>
               <a class="tool-link" href="#">Overview</a>
             </div>
           </article>
@@ -432,3 +441,4 @@
   </footer>
 </body>
 </html>
+```
