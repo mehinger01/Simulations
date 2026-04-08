@@ -1064,5 +1064,19 @@
     drawScene();
     requestAnimationFrame(tick);
   </script>
+
+<script>
+  const simulationStartTime = Date.now();
+
+  window.addEventListener('beforeunload', function () {
+    const timeSpent = Math.round((Date.now() - simulationStartTime) / 1000);
+
+    gtag('event', 'time_on_simulation', {
+      simulation: document.title,
+      seconds: timeSpent
+    });
+  });
+</script>
+  
 </body>
 </html>
