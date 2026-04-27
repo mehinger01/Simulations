@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chemistry Triangle Match - Corrected Interior Edges</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --panel:#fff; --ink:#1f2937; --muted:#64748b;
+    --accent:#2563eb; --width:100px; --height:87px; --half:50px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    overflow:hidden;
+  }
+  header{padding:10px 14px 8px;background:var(--panel);border-bottom:1px solid #e5e7eb}
+  h1{margin:0 0 3px;font-size:20px}
+  p{margin:0;color:var(--muted);line-height:1.25;font-size:13px}
+  .topbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+  .difficulty{border:0;color:white;background:#334155;font-weight:800;border-radius:999px;padding:8px 11px;cursor:pointer;font-size:13px}
+  .difficulty.active{background:var(--accent)}
+  .app{height:calc(100vh - 92px);display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:10px;padding:10px;align-items:start;grid-auto-rows:minmax(0,1fr)}
+  #board{
+    position:relative;width:100%;height:100%;min-height:420px;
+    background:
+      linear-gradient(45deg, rgba(148,163,184,.08) 25%, transparent 25%),
+      linear-gradient(-45deg, rgba(148,163,184,.08) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, rgba(148,163,184,.08) 75%),
+      linear-gradient(-45deg, transparent 75%, rgba(148,163,184,.08) 75%);
+    background-size:28px 28px;background-position:0 0,0 14px,14px -14px,-14px 0;
+    border:2px solid #dbe2ea;border-radius:14px;overflow:hidden;
+    box-shadow:0 8px 24px rgba(15,23,42,.08);touch-action:none;
+  }
+  #targetLayer{position:absolute;inset:0;pointer-events:none}
+  .target{position:absolute;width:0;height:0;opacity:.2;transform-origin:50% 50%}
+  .target.up{border-left:var(--half) solid transparent;border-right:var(--half) solid transparent;border-bottom:var(--height) solid #94a3b8}
+  .target.down{border-left:var(--half) solid transparent;border-right:var(--half) solid transparent;border-top:var(--height) solid #94a3b8}
+  .tile{
+    position:absolute;width:var(--width);height:var(--height);
+    cursor:grab;user-select:none;
+    filter:drop-shadow(0 4px 6px rgba(15,23,42,.22));
+    transition:filter .2s ease;
+  }
+  .tile:active{cursor:grabbing}
+  .tile.locked{cursor:default;filter:drop-shadow(0 0 16px rgba(57,255,20,.95)) drop-shadow(0 0 6px rgba(57,255,20,.95))}
+  .tile svg{width:var(--width);height:var(--height);overflow:visible;pointer-events:none}
+  .tri{fill:#fff;stroke:#111827;stroke-width:2.25}
+  .tile.locked .tri{fill:#f0fff4;stroke:#39ff14;stroke-width:4}
+  .label{
+    font-size:10px;font-weight:750;fill:#111827;text-anchor:middle;dominant-baseline:middle;
+    paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;
+  }
+  .borderText{fill:#64748b}
+  aside{height:100%;max-height:100%;align-self:start;grid-column:2;grid-row:1;overflow:auto;background:var(--panel);border:1px solid #e5e7eb;border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(15,23,42,.06)}
+  .card{border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin-bottom:10px;background:#fff}
+  .stat{display:flex;justify-content:space-between;margin:6px 0;font-size:14px}
+  button.control{width:100%;border:0;background:var(--accent);color:white;font-weight:800;border-radius:10px;padding:10px 12px;cursor:pointer;margin-top:8px}
+  button.secondary{background:#334155}
+  .small{font-size:12px;color:var(--muted)}
+  #toast{
+    position:absolute;left:50%;top:12px;transform:translateX(-50%);
+    background:#111827;color:white;padding:9px 13px;border-radius:999px;
+    font-weight:800;opacity:0;transition:.25s;pointer-events:none;z-index:50
+  }
+  #toast.show{opacity:1}
+  #win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.52);z-index:100}
+  #win.show{display:flex}
+  .winbox{background:white;border-radius:22px;padding:30px 38px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.35);animation:pop .45s ease-out}
+  .trophy{font-size:62px}.champ{font-size:44px;font-weight:900;letter-spacing:3px;color:#ca8a04}
+  @keyframes pop{from{transform:scale(.72);opacity:0}to{transform:scale(1);opacity:1}}
+  @media(max-width:900px){
+    body{overflow:auto}
+    .app{height:auto;min-height:calc(100vh - 92px);grid-template-columns:1fr}
+    #board{height:calc(100vh - 260px);min-height:480px}
+    aside{height:auto;max-height:none;grid-column:auto;grid-row:auto;order:-1}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Chemistry Triangle Match</h1>
+  <p>Build one large triangle. Click/tap to rotate. Interior edges match formula to name. Only interior touching edges have valid matches.</p>
+  <div class="topbar">
+    <button class="difficulty active" data-level="2">Level 1: Small Triangle</button>
+    <button class="difficulty" data-level="3">Level 2: Add a Row</button>
+    <button class="difficulty" data-level="4">Level 3: Add Row</button>
+  </div>
+</header>
+
+<div class="app">
+  <div id="board">
+    <div id="targetLayer"></div>
+    <div id="toast"></div>
+    <div id="win">
+      <div class="winbox">
+        <div class="trophy">🏆</div>
+        <div class="champ">CHAMP</div>
+        <p>All interior chemistry matches are correct.</p>
+      </div>
+    </div>
+  </div>
+
+  <aside>
+    <div class="card">
+      <strong id="levelTitle">Level 1: Small Triangle</strong>
+      <p class="small" id="levelDesc" style="margin-top:8px">Starter puzzle: 4 pieces forming a small triangle.</p>
+    </div>
+    <div class="card">
+      <strong>How to Play</strong>
+      <p class="small" style="margin-top:8px">Drag pieces into the ghost triangle. Click/tap a piece to rotate the whole triangle. When the ghost is visible, pieces snap into nearby ghost spaces. Pieces glow neon green only when one of their edges is correctly connected to the matching chemistry edge.</p>
+      <p class="small" style="margin-top:8px">Outer edges contain real chemistry distractors that do not match any other edge.</p>
+    </div>
+    <div class="card">
+      <strong>Progress</strong>
+      <div class="stat"><span>Correct connections</span><strong><span id="lockedCount">0</span>/<span id="totalCount">0</span></strong></div>
+      <div class="stat"><span>Moves</span><strong id="moves">0</strong></div>
+      <div class="stat"><span>Rotations</span><strong id="rots">0</strong></div>
+    </div>
+    <button class="control" onclick="resetPuzzle()">Reset Current Level</button>
+    <button class="control secondary" onclick="showSolutionGhost()">Toggle Target Ghost</button>
+  </aside>
+</div>
+
+<script>
+const board = document.getElementById('board');
+const targetLayer = document.getElementById('targetLayer');
+const toast = document.getElementById('toast');
+const lockedCountEl = document.getElementById('lockedCount');
+const totalCountEl = document.getElementById('totalCount');
+const movesEl = document.getElementById('moves');
+const rotsEl = document.getElementById('rots');
+const levelTitle = document.getElementById('levelTitle');
+const levelDesc = document.getElementById('levelDesc');
+
+let W = 100, H = 87, HALF = 50;
+let currentN = 2;
+let slots = [], pieces = [];
+let drag = null, movedDuringDrag = false, moves = 0, rotations = 0, ghostVisible = true;
+const DRAG_THRESHOLD = 10;
+let resizeTimer = null;
+
+const matchPairs = [
+  ['CO','carbon monoxide'], ['FeCl3','iron(III) chloride'], ['MgO','magnesium oxide'],
+  ['Na3P','sodium phosphide'], ['SO3','sulfur trioxide'], ['KClO3','potassium chlorate'],
+  ['PCl3','phosphorus trichloride'], ['CBr4','carbon tetrabromide'], ['Ca3N2','calcium nitride'],
+  ['Fe(NO2)3','iron(III) nitrite'], ['Fe(NO3)3','iron(III) nitrate'], ['N2','nitrogen gas'],
+  ['CO','carbon monoxide'], ['MgO','magnesium oxide'], ['KClO3','potassium chlorate'], ['CBr4','carbon tetrabromide'],
+  ['SO3','sulfur trioxide'], ['FeCl3','iron(III) chloride']
+];
+
+const outerDistractors = [
+  'H2O', 'water',
+  'CO2', 'carbon dioxide',
+  'NaCl', 'sodium chloride',
+  'NH3', 'ammonia',
+  'CH4', 'methane',
+  'O2', 'oxygen gas',
+  'HCl', 'hydrogen chloride',
+  'Al2O3', 'aluminum oxide',
+  'CuSO4', 'copper(II) sulfate',
+  'KBr', 'potassium bromide',
+  'LiF', 'lithium fluoride',
+  'ZnO', 'zinc oxide',
+  'AgNO3', 'silver nitrate',
+  'BaCl2', 'barium chloride',
+  'SiO2', 'silicon dioxide',
+  'PbO2', 'lead(IV) oxide'
+];
+
+function isOuterDistractor(text){
+  return outerDistractors.includes(text);
+}
+
+function levelMeta(n){
+  if(n===2) return ['Level 1: Small Triangle','Starter puzzle: 4 pieces forming a small triangle.'];
+  if(n===3) return ['Level 2: Add a Row','Medium puzzle: 9 pieces. One full outer row has been added.'];
+  return ['Level 3: Add Row','Larger puzzle: 16 pieces. A third row is added around the puzzle.'];
+}
+
+function fitSizes(n){
+  const bw = board.clientWidth || 760;
+  const bh = board.clientHeight || 520;
+  const sideFit = Math.floor((bw - 40) / n);
+  const heightFit = Math.floor((bh * 0.52) / n / 0.866);
+  const desired = n===2 ? 136 : n===3 ? 112 : 92;
+  W = Math.max(62, Math.min(desired, sideFit, heightFit));
+  H = Math.round(W * 0.866);
+  HALF = W/2;
+  document.documentElement.style.setProperty('--width', W+'px');
+  document.documentElement.style.setProperty('--height', H+'px');
+  document.documentElement.style.setProperty('--half', HALF+'px');
+}
+
+function canonicalEdge(p1,p2){
+  const a = `${Math.round(p1.x)},${Math.round(p1.y)}`;
+  const b = `${Math.round(p2.x)},${Math.round(p2.y)}`;
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+function buildSlots(n){
+  fitSizes(n);
+  const totalWidth = n*W;
+  const ox = Math.max(14, (board.clientWidth - totalWidth)/2);
+  const oy = Math.max(18, Math.min(70, board.clientHeight * 0.08));
+  const all = [];
+
+  for(let r=0;r<n;r++){
+    for(let c=0;c<=r;c++){
+      const x = ox + (n-r-1)*HALF + c*W;
+      const y = oy + r*H;
+      all.push({
+        orient:'up', r, c, x, y,
+        pts:{ top:{x:x+HALF,y:y}, bl:{x:x,y:y+H}, br:{x:x+W,y:y+H} },
+        edges:{L:'OUTER',R:'OUTER',B:'OUTER'}
+      });
+      if(c<r){
+        const dx = ox + (n-r)*HALF + c*W;
+        const dy = oy + r*H;
+        all.push({
+          orient:'down', r, c, x:dx, y:dy,
+          pts:{ tl:{x:dx,y:dy}, tr:{x:dx+W,y:dy}, bottom:{x:dx+HALF,y:dy+H} },
+          edges:{L:'OUTER',R:'OUTER',B:'OUTER'}
+        });
+      }
+    }
+  }
+
+  // Map every physical triangle edge. If an edge appears twice, it is interior.
+  const edgeMap = new Map();
+  all.forEach((s, idx)=>{
+    const defs = s.orient === 'up'
+      ? [
+          {edge:'L', key:canonicalEdge(s.pts.top, s.pts.bl)},
+          {edge:'R', key:canonicalEdge(s.pts.top, s.pts.br)},
+          {edge:'B', key:canonicalEdge(s.pts.bl, s.pts.br)}
+        ]
+      : [
+          {edge:'L', key:canonicalEdge(s.pts.tl, s.pts.bottom)},
+          {edge:'R', key:canonicalEdge(s.pts.tr, s.pts.bottom)},
+          {edge:'B', key:canonicalEdge(s.pts.tl, s.pts.tr)}
+        ];
+    defs.forEach(d=>{
+      if(!edgeMap.has(d.key)) edgeMap.set(d.key, []);
+      edgeMap.get(d.key).push({idx, edge:d.edge});
+    });
+  });
+
+  let pairIndex = 0;
+  for(const items of edgeMap.values()){
+    if(items.length === 2){
+      const pair = matchPairs[pairIndex++ % matchPairs.length];
+      all[items[0].idx].edges[items[0].edge] = pair[0];
+      all[items[1].idx].edges[items[1].edge] = pair[1];
+    }
+  }
+
+  assignOuterDistractors(all);
+
+  return all.map((s,i)=>({...s,id:String.fromCharCode(65+i)}));
+}
+
+function assignOuterDistractors(all){
+  let d = 0;
+  for(const s of all){
+    ['L','R','B'].forEach(edge=>{
+      if(s.edges[edge] === 'OUTER'){
+        s.edges[edge] = outerDistractors[d % outerDistractors.length];
+        d++;
+      }
+    });
+  }
+}
+
+function createTargets(){
+  targetLayer.innerHTML = '';
+  slots.forEach(s=>{
+    const div = document.createElement('div');
+    div.className = `target ${s.orient}`;
+    div.style.left = s.x + 'px';
+    div.style.top = s.y + 'px';
+    targetLayer.appendChild(div);
+  });
+}
+
+function trianglePoints(orient){
+  return orient === 'up' ? `${HALF},0 ${W},${H} 0,${H}` : `0,0 ${W},0 ${HALF},${H}`;
+}
+
+function labelPositions(orient){
+  if(orient === 'up'){
+    return { L:{x:W*.27,y:H*.62,rot:-58}, R:{x:W*.73,y:H*.62,rot:58}, B:{x:W*.5,y:H*.88,rot:0} };
+  }
+  return { L:{x:W*.27,y:H*.37,rot:58}, R:{x:W*.73,y:H*.37,rot:-58}, B:{x:W*.5,y:H*.13,rot:0} };
+}
+
+function labelSize(){ return Math.max(7.2, Math.min(10.5, W/10)); }
+
+function shortLabel(text){
+  
+  return text
+    .replace('iron(III)','Fe(III)')
+    .replace('phosphorus','phos.')
+    .replace('potassium','pot.')
+    .replace('magnesium','mag.')
+    .replace('calcium','calc.')
+    .replace('carbon','carb.')
+    .replace('chloride','chlor.')
+    .replace('tetrabromide','tetrab.');
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function spawnPositions(count){
+  const positions = [];
+  const pad = 12;
+  const gap = Math.max(8, W * 0.12);
+  const cols = Math.max(1, Math.floor((board.clientWidth - pad*2) / (W + gap)));
+  const gridW = cols * (W + gap) - gap;
+  const startX = Math.max(pad, (board.clientWidth - gridW)/2);
+  const puzzleBottom = Math.max(...slots.map(s=>s.y)) + H;
+  let startY = Math.min(board.clientHeight - H - pad, puzzleBottom + Math.max(16, H*.35));
+
+  const rowsNeeded = Math.ceil(count / cols);
+  const availableHeight = board.clientHeight - startY - pad;
+  const rowGap = Math.max(3, Math.min(H*.42, (availableHeight - H) / Math.max(1, rowsNeeded-1)));
+  if(availableHeight < H){
+    startY = Math.max(puzzleBottom + 8, board.clientHeight - (rowsNeeded * (H*.58)) - H - pad);
+  }
+
+  for(let i=0;i<count;i++){
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    positions.push({
+      x: Math.min(board.clientWidth - W - pad, startX + col*(W+gap)),
+      y: Math.min(board.clientHeight - H - pad, startY + row*(H*.48 + rowGap))
+    });
+  }
+  return positions;
+}
+
+
+function visualOrient(p){
+  const step = Math.round((((p.rot % 360) + 360) % 360) / 60) % 6;
+  const flips = step % 2 === 1;
+  if(!flips) return p.orient;
+  return p.orient === 'up' ? 'down' : 'up';
+}
+
+function displayEdgeMap(p){
+  const step = Math.round((((p.rot % 360) + 360) % 360) / 60) % 6;
+  const maps = {
+    up: [
+      {L:'L', R:'R', B:'B'},
+      {L:'B', R:'R', B:'L'},
+      {L:'B', R:'L', B:'R'},
+      {L:'R', R:'L', B:'B'},
+      {L:'R', R:'B', B:'L'},
+      {L:'L', R:'B', B:'R'}
+    ],
+    down: [
+      {L:'L', R:'R', B:'B'},
+      {L:'R', R:'B', B:'L'},
+      {L:'R', R:'L', B:'B'},
+      {L:'B', R:'L', B:'R'},
+      {L:'B', R:'R', B:'L'},
+      {L:'L', R:'B', B:'R'}
+    ]
+  };
+  return maps[p.orient][step];
+}
+
+function newPieces(){
+  const starts = shuffle(spawnPositions(slots.length));
+  pieces = slots.map((s,i)=>({
+    id:s.id, target:s.id, orient:s.orient,
+    x:starts[i].x, y:starts[i].y,
+    rot:[0,60,120,180,240,300][Math.floor(Math.random()*6)],
+    locked:false, currentSlot:null, edges:{...s.edges}
+  }));
+}
+
+function render(){
+  document.querySelectorAll('.tile').forEach(n=>n.remove());
+  pieces.forEach(p=>{
+    const el = document.createElement('div');
+    const vOrient = visualOrient(p);
+    const edgeMap = displayEdgeMap(p);
+    el.className = 'tile ' + vOrient + (p.locked ? ' locked' : '');
+    el.dataset.id = p.id;
+    el.style.left = p.x + 'px';
+    el.style.top = p.y + 'px';
+    el.style.transform = 'none';
+    const pos = labelPositions(vOrient);
+    const fs = labelSize();
+    el.innerHTML = `
+      <svg viewBox="0 0 ${W} ${H}">
+        <polygon class="tri" points="${trianglePoints(vOrient)}"></polygon>
+        ${['L','R','B'].map(k => {
+          const originalEdge = edgeMap[k];
+          const label = p.edges[originalEdge];
+          return `
+          <text class="label ${isOuterDistractor(label)?'borderText':''}"
+                style="font-size:${fs}px"
+                x="${pos[k].x}" y="${pos[k].y}"
+                transform="rotate(${pos[k].rot} ${pos[k].x} ${pos[k].y})">${shortLabel(label)}</text>`;
+        }).join('')}
+      </svg>`;
+    board.appendChild(el);
+    el.addEventListener('pointerdown', startDrag);
+  });
+  const connectionStats = getConnectionStats();
+  lockedCountEl.textContent = connectionStats.correct;
+  totalCountEl.textContent = connectionStats.total;
+  movesEl.textContent = moves;
+  rotsEl.textContent = rotations;
+}
+
+function startDrag(e){
+  const p = pieces.find(x=>x.id===e.currentTarget.dataset.id);
+  if(!p) return;
+
+  try {
+    e.currentTarget.setPointerCapture(e.pointerId);
+  } catch(err) {
+    // Some browsers are picky with SVG/HTML pointer capture.
+  }
+
+  drag = {
+    id:p.id,
+    pointerId:e.pointerId,
+    targetEl:e.currentTarget,
+    startX:e.clientX,
+    startY:e.clientY,
+    origX:p.x,
+    origY:p.y
+  };
+  movedDuringDrag = false;
+  e.preventDefault();
+}
+
+window.addEventListener('pointermove', e=>{
+  if(!drag) return;
+  const p = pieces.find(x=>x.id===drag.id);
+  if(!p) return;
+
+  const dx = e.clientX - drag.startX;
+  const dy = e.clientY - drag.startY;
+  const distance = Math.hypot(dx, dy);
+
+  // Do not move the piece at all for small pointer jitter.
+  // This keeps click-to-rotate perfectly in place.
+  if(distance < DRAG_THRESHOLD && !movedDuringDrag){
+    return;
+  }
+
+  movedDuringDrag = true;
+  p.x = Math.max(0, Math.min(board.clientWidth - W, drag.origX + dx));
+  p.y = Math.max(0, Math.min(board.clientHeight - H, drag.origY + dy));
+
+  const el = document.querySelector(`.tile[data-id="${p.id}"]`);
+  if(el){
+    el.style.left = p.x + 'px';
+    el.style.top = p.y + 'px';
+  }
+});
+
+function finishPointerAction(){
+  if(!drag) return;
+
+  const p = pieces.find(x=>x.id===drag.id);
+  if(!p){
+    drag = null;
+    render();
+    return;
+  }
+
+  if(movedDuringDrag){
+    moves++;
+    tryLock(p);
+  } else {
+    // Click/tap rotation only. Preserve exact position.
+    p.x = drag.origX;
+    p.y = drag.origY;
+    p.rot = (p.rot + 60) % 360;
+    rotations++;
+    tryLock(p);
+  }
+
+  try {
+    if(drag.targetEl && drag.pointerId !== undefined) {
+      drag.targetEl.releasePointerCapture(drag.pointerId);
+    }
+  } catch(err) {}
+
+  drag = null;
+  movedDuringDrag = false;
+  render();
+}
+
+window.addEventListener('pointerup', finishPointerAction);
+window.addEventListener('pointercancel', ()=>{ drag = null; movedDuringDrag = false; });
+
+function nearestCompatibleSlot(p){
+  let best = null;
+  let bestDistance = Infinity;
+  slots.forEach(s=>{
+    if(s.orient !== visualOrient(p)) return;
+    const d = Math.hypot(p.x - s.x, p.y - s.y);
+    if(d < bestDistance){
+      bestDistance = d;
+      best = s;
+    }
+  });
+  const snapDistance = Math.max(34, W*.42);
+  return best && bestDistance <= snapDistance ? best : null;
+}
+
+function snapToGhostIfNear(p){
+  if(!ghostVisible){
+    p.currentSlot = null;
+    return null;
+  }
+  const nearest = nearestCompatibleSlot(p);
+  if(!nearest){
+    p.currentSlot = null;
+    return null;
+  }
+
+  // Snap is intentionally based only on location and orientation.
+  // It does not check whether the chemistry labels or rotation are correct.
+  p.x = nearest.x;
+  p.y = nearest.y;
+  p.currentSlot = nearest.id;
+  return nearest;
+}
+
+function tryLock(p){
+  snapToGhostIfNear(p);
+  updateConnectionGlow();
+  checkSolved();
+}
+
+function slotEdgeDefs(s){
+  if(s.orient === 'up'){
+    return [
+      {edge:'L', key:canonicalEdge(s.pts.top, s.pts.bl)},
+      {edge:'R', key:canonicalEdge(s.pts.top, s.pts.br)},
+      {edge:'B', key:canonicalEdge(s.pts.bl, s.pts.br)}
+    ];
+  }
+  return [
+    {edge:'L', key:canonicalEdge(s.pts.tl, s.pts.bottom)},
+    {edge:'R', key:canonicalEdge(s.pts.tr, s.pts.bottom)},
+    {edge:'B', key:canonicalEdge(s.pts.tl, s.pts.tr)}
+  ];
+}
+
+function sharedPhysicalEdges(slotA, slotB){
+  const aDefs = slotEdgeDefs(slotA);
+  const bDefs = slotEdgeDefs(slotB);
+  for(const a of aDefs){
+    const b = bDefs.find(x=>x.key === a.key);
+    if(b) return {edgeA:a.edge, edgeB:b.edge};
+  }
+  return null;
+}
+
+function originalEdgeForPhysicalEdge(p, physicalEdge){
+  return displayEdgeMap(p)[physicalEdge];
+}
+
+function labelOnPhysicalEdge(p, physicalEdge){
+  const originalEdge = originalEdgeForPhysicalEdge(p, physicalEdge);
+  return p.edges[originalEdge];
+}
+
+function isChemMatch(a, b){
+  return matchPairs.some(pair =>
+    (pair[0] === a && pair[1] === b) ||
+    (pair[0] === b && pair[1] === a)
+  );
+}
+
+function placedPieces(){
+  return pieces.filter(p => p.currentSlot);
+}
+
+function getConnectionStats(){
+  const placed = placedPieces();
+  let total = 0;
+  let correct = 0;
+
+  for(let i=0;i<placed.length;i++){
+    for(let j=i+1;j<placed.length;j++){
+      const a = placed[i];
+      const b = placed[j];
+      const slotA = slots.find(s=>s.id === a.currentSlot);
+      const slotB = slots.find(s=>s.id === b.currentSlot);
+      if(!slotA || !slotB) continue;
+
+      const shared = sharedPhysicalEdges(slotA, slotB);
+      if(!shared) continue;
+
+      total++;
+      const labelA = labelOnPhysicalEdge(a, shared.edgeA);
+      const labelB = labelOnPhysicalEdge(b, shared.edgeB);
+      if(isChemMatch(labelA, labelB)) correct++;
+    }
+  }
+
+  return {correct, total};
+}
+
+function updateConnectionGlow(){
+  pieces.forEach(p=>p.locked = false);
+
+  const placed = placedPieces();
+  for(let i=0;i<placed.length;i++){
+    for(let j=i+1;j<placed.length;j++){
+      const a = placed[i];
+      const b = placed[j];
+      const slotA = slots.find(s=>s.id === a.currentSlot);
+      const slotB = slots.find(s=>s.id === b.currentSlot);
+      if(!slotA || !slotB) continue;
+
+      const shared = sharedPhysicalEdges(slotA, slotB);
+      if(!shared) continue;
+
+      const labelA = labelOnPhysicalEdge(a, shared.edgeA);
+      const labelB = labelOnPhysicalEdge(b, shared.edgeB);
+      if(isChemMatch(labelA, labelB)){
+        a.locked = true;
+        b.locked = true;
+      }
+    }
+  }
+}
+
+function isPieceCorrect(p){
+  // A piece is considered visually correct only when it is connected to a matching neighbor.
+  return !!p.locked;
+}
+
+function checkSolved(){
+  updateConnectionGlow();
+  const stats = getConnectionStats();
+  lockedCountEl.textContent = stats.correct;
+  totalCountEl.textContent = stats.total;
+
+  const fullPuzzleConnectionCount = slots.reduce((count, slotA, i)=>{
+    for(let j=i+1;j<slots.length;j++){
+      if(sharedPhysicalEdges(slotA, slots[j])) count++;
+    }
+    return count;
+  }, 0);
+
+  if(stats.total === fullPuzzleConnectionCount && stats.correct === fullPuzzleConnectionCount){
+    win();
+  }
+}
+
+function pulse(msg){
+  // intentionally disabled: no hints or correctness feedback
+}
+
+function win(){
+  setTimeout(()=>{
+    document.getElementById('win').classList.add('show');
+    document.querySelectorAll('.tile').forEach(el=>{
+      el.style.filter = `drop-shadow(0 0 18px hsl(${Math.random()*360},85%,55%))`;
+    });
+  },200);
+}
+
+function resetPuzzle(){
+  document.getElementById('win').classList.remove('show');
+  moves = 0; rotations = 0;
+  slots = buildSlots(currentN);
+  createTargets();
+  newPieces();
+  render();
+}
+
+function setLevel(n){
+  currentN = n;
+  document.querySelectorAll('.difficulty').forEach(b=>b.classList.toggle('active', Number(b.dataset.level)===n));
+  const [title, desc] = levelMeta(n);
+  levelTitle.textContent = title;
+  levelDesc.textContent = desc;
+  resetPuzzle();
+}
+
+function showSolutionGhost(){
+  ghostVisible = !ghostVisible;
+  targetLayer.style.display = ghostVisible ? 'block':'none';
+}
+
+document.querySelectorAll('.difficulty').forEach(btn=>{
+  btn.addEventListener('click',()=>setLevel(Number(btn.dataset.level)));
+});
+
+window.addEventListener('resize', ()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(()=>resetPuzzle(), 180);
+});
+
+setLevel(2);
+</script>
+</body>
+</html>
