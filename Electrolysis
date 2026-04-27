@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Electrolysis and Dissociation Simulator</title>
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --panel:#ffffff;
+      --ink:#18324a;
+      --muted:#5a7184;
+      --line:#d7e1ea;
+      --accent:#1f6fb2;
+      --accent2:#2f9e44;
+      --warn:#d94841;
+      --soft:#eef5fb;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      color:var(--ink);
+      background:linear-gradient(180deg,#edf4fb 0%, #f7fbff 100%);
+    }
+    .wrap{
+      max-width:1300px;
+      margin:0 auto;
+      padding:18px;
+    }
+    .title{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:16px 20px;
+      box-shadow:0 6px 20px rgba(0,0,0,.04);
+      margin-bottom:16px;
+    }
+    h1{
+      margin:0 0 6px 0;
+      font-size:30px;
+      line-height:1.1;
+    }
+    .subtitle{
+      font-size:18px;
+      color:var(--accent);
+      font-weight:700;
+    }
+    .grid{
+      display:grid;
+      gap:16px;
+    }
+    .top{
+      grid-template-columns: 1.1fr 1fr;
+    }
+    .mid{
+      grid-template-columns: 1fr;
+      margin-top:16px;
+    }
+    .bottom{
+      grid-template-columns: 1fr;
+      margin-top:16px;
+      align-items:start;
+    }
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:16px;
+      box-shadow:0 6px 20px rgba(0,0,0,.04);
+    }
+    .panel h2{
+      margin:0 0 12px 0;
+      font-size:20px;
+    }
+    .panel h3{
+      margin:0 0 8px 0;
+      font-size:17px;
+    }
+    label{
+      font-weight:700;
+      font-size:14px;
+      display:block;
+      margin-bottom:6px;
+    }
+    select, button, input[type="range"]{
+      font:inherit;
+    }
+    select{
+      width:100%;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#fff;
+      color:var(--ink);
+      font-size:16px;
+    }
+    .btnrow{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:12px;
+    }
+    button{
+      border:none;
+      border-radius:10px;
+      padding:11px 14px;
+      font-weight:700;
+      cursor:pointer;
+      background:var(--accent);
+      color:#fff;
+    }
+    button.secondary{
+      background:#5c7c94;
+    }
+    button.ghost{
+      background:#edf4fb;
+      color:var(--ink);
+      border:1px solid var(--line);
+    }
+    button.choice{
+      background:#eef5fb;
+      color:var(--ink);
+      border:1px solid var(--line);
+      min-width:64px;
+    }
+    button.choice.active{
+      background:var(--accent);
+      color:#fff;
+      border-color:var(--accent);
+    }
+    .meta{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:var(--soft);
+      border:1px solid var(--line);
+      line-height:1.45;
+    }
+    .meta strong{display:inline-block; min-width:138px;}
+    .title-line{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+    .header-controls{
+      display:flex;
+      align-items:flex-start;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:2px;
+    }
+    .header-controls .display-group{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap:8px;
+    }
+    .header-controls .display-buttons{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .meta-wrap{
+      display:flex;
+      gap:16px;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:nowrap;
+    }
+    .meta-text{
+      flex:1 1 auto;
+      min-width:0;
+    }
+    .meta-side{
+      flex:0 0 260px;
+      width:260px;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      justify-content:flex-start;
+      gap:8px;
+      margin-left:auto;
+      padding-top:0;
+    }
+    .meta-side .legend{
+      justify-content:flex-end;
+      align-self:flex-start;
+      width:100%;
+      margin-top:0;
+    }
+    .meta-note{
+      text-align:right;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      margin-top:2px;
+    }
+    .predict-grid{
+      display:grid;
+      grid-template-columns: 1.4fr auto auto;
+      gap:10px;
+      align-items:center;
+    }
+    .tabs{
+      display:flex;
+      gap:8px;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    .tab-btn{
+      background:#eef5fb;
+      color:var(--ink);
+      border:1px solid var(--line);
+    }
+    .tab-btn.active{
+      background:var(--accent);
+      color:#fff;
+      border-color:var(--accent);
+    }
+    .tab-panel{display:none;}
+    .tab-panel.active{display:block;}
+    .predict-grid .q{
+      font-weight:700;
+    }
+    .small{
+      font-size:13px;
+      color:var(--muted);
+    }
+    .compare{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+    .mini-box{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      background:#fbfdff;
+    }
+    .particle-space{
+      position:relative;
+      height:170px;
+      border:1px dashed #c9d8e6;
+      border-radius:12px;
+      background:linear-gradient(180deg,#fdfefe 0%,#f3f9ff 100%);
+      overflow:hidden;
+      margin-top:8px;
+    }
+    .equation{
+      margin-top:8px;
+      font-family:"Trebuchet MS", Arial, sans-serif;
+      font-size:17px;
+      font-weight:700;
+      color:#284c6a;
+    }
+    .particle{
+      position:absolute;
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      font-size:12px;
+      border:2px solid rgba(0,0,0,.12);
+      background:#fff;
+      color:#123;
+      user-select:none;
+    }
+    .particle.neutral{
+      border-radius:12px;
+      width:auto;
+      min-width:56px;
+      padding:0 8px;
+      background:#f7e7b0;
+    }
+    .particle.cation{
+      background:#cfe8ff;
+    }
+    .particle.anion{
+      background:#ffd9d7;
+    }
+
+    .tank{
+      position:relative;
+      height:430px;
+      border-radius:18px;
+      border:1px solid var(--line);
+      overflow:hidden;
+      background:linear-gradient(180deg,#dff1ff 0%, #cfe8ff 55%, #c4e2ff 100%);
+    }
+    .water-overlay{
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(255,255,255,.45) 0 3px, transparent 4px) 0 0/56px 56px,
+        radial-gradient(circle at 70% 35%, rgba(255,255,255,.35) 0 2px, transparent 3px) 0 0/72px 72px;
+      opacity:.55;
+      pointer-events:none;
+    }
+    .electrode{
+      position:absolute;
+      top:45px;
+      bottom:45px;
+      width:24px;
+      background:linear-gradient(180deg,#54606b,#313941);
+      border-radius:10px;
+      z-index:3;
+    }
+    .electrode.left{left:36px;}
+    .electrode.right{right:36px;}
+    .electrode-label{
+      position:absolute;
+      top:12px;
+      font-size:16px;
+      font-weight:700;
+      z-index:4;
+      background:rgba(255,255,255,.78);
+      padding:6px 10px;
+      border-radius:10px;
+      border:1px solid rgba(0,0,0,.08);
+    }
+    .electrode-label.left{left:20px;}
+    .electrode-label.right{right:20px;}
+    .reaction-box{
+      position:absolute;
+      bottom:12px;
+      width:210px;
+      background:rgba(255,255,255,.9);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      font-size:14px;
+      z-index:4;
+    }
+    .reaction-box.left{left:14px;}
+    .reaction-box.right{right:14px;}
+    #tankParticles{
+      position:absolute; inset:0;
+    }
+    .tank-particle{
+      position:absolute;
+      width:42px;
+      height:42px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:12px;
+      font-weight:700;
+      border:2px solid rgba(0,0,0,.13);
+      z-index:2;
+      box-shadow:0 4px 10px rgba(0,0,0,.08);
+      user-select:none;
+    }
+    .tank-particle.cation{background:#cfe8ff;}
+    .tank-particle.anion{background:#ffd9d7;}
+    .tank-particle.neutral{
+      background:#f7e7b0;
+      border-radius:12px;
+      width:auto;
+      min-width:58px;
+      padding:0 8px;
+    }
+    .bubble{
+      position:absolute;
+      width:12px;
+      height:12px;
+      border-radius:50%;
+      background:rgba(255,255,255,.75);
+      border:1px solid rgba(90,113,132,.3);
+      z-index:1;
+      pointer-events:none;
+    }
+
+    .controls-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:10px;
+    }
+    .toggle-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    .pill{
+      display:inline-block;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:#f8fbfe;
+      font-size:14px;
+      font-weight:700;
+    }
+    .meter-wrap{
+      margin-top:12px;
+      padding:12px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#fbfdff;
+    }
+    .meter{
+      width:100%;
+      height:18px;
+      border-radius:999px;
+      background:#e8eef5;
+      overflow:hidden;
+      border:1px solid var(--line);
+      margin-top:8px;
+    }
+    .meter-fill{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg,#89b4d8,#1f6fb2);
+      transition:width .4s ease;
+    }
+    .bulb{
+      font-size:28px;
+      vertical-align:middle;
+      margin-right:8px;
+    }
+    .explain{
+      min-height:150px;
+      line-height:1.55;
+      font-size:16px;
+    }
+    .feedback{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#f7fbff;
+      border:1px solid var(--line);
+      min-height:58px;
+    }
+    .legend{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:0;
+    }
+    .legend span{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 9px;
+      border:1px solid var(--line);
+      border-radius:999px;
+      background:#fbfdff;
+      font-size:13px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .dot{
+      width:14px;height:14px;border-radius:50%;
+      display:inline-block;border:1px solid rgba(0,0,0,.15);
+    }
+    .dot.cation{background:#cfe8ff}
+    .dot.anion{background:#ffd9d7}
+    .dot.neutral{background:#f7e7b0;border-radius:4px}
+    .footer-note{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:13px;
+    }
+    @media (max-width: 980px){
+      .top,.mid,.bottom{grid-template-columns:1fr;}
+      .tank{height:400px;}
+      .header-controls .display-group{
+        align-items:flex-start;
+      }
+      .header-controls .display-buttons{
+        justify-content:flex-start;
+      }
+      .meta-wrap{
+        flex-wrap:wrap;
+      }
+      .meta-side{
+        align-items:flex-start;
+        width:auto;
+        flex:1 1 100%;
+      }
+      .meta-side .legend{
+        justify-content:flex-start;
+      }
+      .meta-note{
+        text-align:left;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="title">
+    <h1>Electrolysis and Dissociation Simulator</h1>
+    <div class="subtitle">Big idea: No ions = no electrolysis</div>
+  </div>
+
+  <div class="grid top">
+    <section class="panel">
+      <div class="title-line">
+        <h2>Select Substance</h2>
+        <div class="header-controls">
+          <div class="display-group">
+            <label>Display options</label>
+            <div class="display-buttons">
+              <button id="labelsToggle" class="choice active">Labels On</button>
+              <button id="equationsToggle" class="choice active">Equations On</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <label for="substanceSelect">Choose a substance</label>
+      <select id="substanceSelect"></select>
+
+      <div class="meta">
+        <div class="meta-wrap">
+          <div class="meta-text" id="substanceMeta"></div>
+          <div class="meta-side">
+            <div class="legend">
+              <span><i class="dot cation"></i> Cation</span>
+              <span><i class="dot anion"></i> Anion</span>
+              <span><i class="dot neutral"></i> Neutral molecule</span>
+            </div>
+            <div class="meta-note">Use salt vs sugar as the strongest comparison for first-time learners.</div>
+          </div>
+        </div>
+      </div>
+    
+
+      <div class="btnrow">
+        <button id="addBtn">Add to Water</button>
+        <button id="startBtn" class="secondary">Start</button>
+        <button id="pauseBtn" class="secondary">Pause</button>
+        <button id="resetBtn" class="ghost">Reset</button>
+      </div>
+
+      <div class="controls-grid">
+        <div>
+          <label for="voltageSlider">Voltage / field strength</label>
+          <input id="voltageSlider" type="range" min="1" max="10" step="1" value="5" />
+          <div class="small">Higher voltage increases directed ion motion.</div>
+        </div>
+        
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Predictions, Conductivity & Comparison</h2>
+      <div class="tabs">
+        <button id="tabPredictions" class="tab-btn active">Predictions</button>
+        <button id="tabConductivity" class="tab-btn">Conductivity</button>
+        <button id="tabComparison" class="tab-btn">Before vs After</button>
+      </div>
+
+      <div id="predictionsPanel" class="tab-panel active">
+        <div class="predict-grid">
+          <div class="q">Dissociates in water?</div>
+          <button class="choice predict" data-q="dissociates" data-a="yes">Yes</button>
+          <button class="choice predict" data-q="dissociates" data-a="no">No</button>
+
+          <div class="q">Conducts electricity?</div>
+          <button class="choice predict" data-q="conducts" data-a="yes">Yes</button>
+          <button class="choice predict" data-q="conducts" data-a="no">No</button>
+
+          <div class="q">Electrolysis occurs?</div>
+          <button class="choice predict" data-q="electrolysis" data-a="yes">Yes</button>
+          <button class="choice predict" data-q="electrolysis" data-a="no">No</button>
+        </div>
+        <div class="btnrow">
+          <button id="checkPredictionsBtn">Check My Thinking</button>
+          <button id="clearPredictionsBtn" class="ghost">Clear Choices</button>
+        </div>
+        <div class="feedback" id="predictionFeedback">
+          Make predictions, then compare them to the simulation.
+        </div>
+      </div>
+
+      <div id="conductivityPanel" class="tab-panel">
+        <div class="meter-wrap">
+          <div><span class="bulb" id="bulbIcon">💡</span><strong id="bulbLabel">Not added yet</strong></div>
+          <div class="meter"><div class="meter-fill" id="meterFill"></div></div>
+          <div class="small" id="conductivityText" style="margin-top:8px;">Add a substance to see conductivity.</div>
+        </div>
+        <div class="meter-wrap">
+          <h3 style="margin-bottom:6px;">Live Explanation</h3>
+          <div class="explain" id="explanationBox"></div>
+        </div>
+      </div>
+
+      <div id="comparisonPanel" class="tab-panel">
+        <div class="compare">
+          <div class="mini-box">
+            <h3>Before Water</h3>
+            <div class="small">How the substance is represented before mixing</div>
+            <div class="particle-space" id="beforeBox"></div>
+            <div class="equation" id="beforeEquation"></div>
+          </div>
+          <div class="mini-box">
+            <h3>After Water</h3>
+            <div class="small">What particles are present after dissolving in water</div>
+            <div class="particle-space" id="afterBox"></div>
+            <div class="equation" id="afterEquation"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+</div>
+
+
+  <div class="grid mid"></div>
+
+  <div class="grid bottom">
+    <section class="panel">
+      <h2>Main Electrolysis Tank</h2>
+      <div class="tank" id="tank">
+        <div class="electrode-label left" id="leftLabel">Cathode (−) | Negative Electrode</div>
+        <div class="electrode-label right" id="rightLabel">Anode (+) | Positive Electrode</div>
+        <div class="electrode left"></div>
+        <div class="electrode right"></div>
+        <div id="tankParticles"></div>
+        <div class="water-overlay"></div>
+        <div class="reaction-box left" id="leftReaction"><strong>Cathode:</strong> Waiting for ions.</div>
+        <div class="reaction-box right" id="rightReaction"><strong>Anode:</strong> Waiting for ions.</div>
+      </div>
+    </section>
+
+    
+  </div>
+</div>
+
+<script>
+const substances = {
+  nacl: {
+    name: "NaCl",
+    display: "Sodium chloride (NaCl)",
+    type: "Ionic compound",
+    formula: "NaCl",
+    beforeEquation: "NaCl",
+    afterEquation: "NaCl → Na⁺ + Cl⁻",
+    dissociates: true,
+    conducts: "strong",
+    electrolysis: true,
+    ions: [
+      {label:"Na⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"}
+    ],
+    beforeUnits: [
+      {label:"NaCl", kind:"neutral"},
+      {label:"NaCl", kind:"neutral"},
+      {label:"NaCl", kind:"neutral"},
+      {label:"NaCl", kind:"neutral"}
+    ],
+    afterUnits: [
+      {label:"Na⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"},
+      {label:"Na⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"},
+      {label:"Na⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"}
+    ],
+    explanation: "NaCl is an ionic compound. In water, it dissociates into Na⁺ and Cl⁻ ions. Those charged particles can move through the solution, so current flows. During electrolysis, positive ions move toward the cathode and negative ions move toward the anode.",
+    cathode: "Cations arrive here. In this model, reduction happens at the cathode.",
+    anode: "Anions arrive here. In this model, oxidation happens at the anode.",
+    afterBehavior: "Forms many mobile ions in water."
+  },
+  cucl2: {
+    name: "CuCl₂",
+    display: "Copper(II) chloride (CuCl₂)",
+    type: "Ionic compound",
+    formula: "CuCl₂",
+    beforeEquation: "CuCl₂",
+    afterEquation: "CuCl₂ → Cu²⁺ + 2Cl⁻",
+    dissociates: true,
+    conducts: "strong",
+    electrolysis: true,
+    ions: [
+      {label:"Cu²⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"}
+    ],
+    beforeUnits: [
+      {label:"CuCl₂", kind:"neutral"},
+      {label:"CuCl₂", kind:"neutral"},
+      {label:"CuCl₂", kind:"neutral"},
+      {label:"CuCl₂", kind:"neutral"}
+    ],
+    afterUnits: [
+      {label:"Cu²⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"},
+      {label:"Cl⁻", kind:"anion"},
+      {label:"Cu²⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"},
+      {label:"Cl⁻", kind:"anion"}
+    ],
+    explanation: "CuCl₂ dissociates into copper ions and chloride ions in water. Because many ions are present, the solution conducts well. This is a strong example of electrolysis because students can clearly connect dissociation to ion motion.",
+    cathode: "Cu²⁺ ions move toward the cathode. In a fuller model, copper can be deposited here.",
+    anode: "Cl⁻ ions move toward the anode. In a fuller model, oxidation can produce chlorine gas.",
+    afterBehavior: "Forms many mobile ions in water."
+  },
+  hcl: {
+    name: "HCl",
+    display: "Hydrochloric acid (HCl)",
+    type: "Strong acid",
+    formula: "HCl",
+    beforeEquation: "HCl",
+    afterEquation: "HCl → H⁺ + Cl⁻",
+    dissociates: true,
+    conducts: "strong",
+    electrolysis: true,
+    ions: [
+      {label:"H⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"}
+    ],
+    beforeUnits: [
+      {label:"HCl", kind:"neutral"},
+      {label:"HCl", kind:"neutral"},
+      {label:"HCl", kind:"neutral"},
+      {label:"HCl", kind:"neutral"}
+    ],
+    afterUnits: [
+      {label:"H⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"},
+      {label:"H⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"},
+      {label:"H⁺", kind:"cation"},
+      {label:"Cl⁻", kind:"anion"}
+    ],
+    explanation: "HCl is a molecular substance, but it is also a strong acid. In water, it dissociates into H⁺ and Cl⁻ ions. That means it still conducts electricity well and can support electrolysis.",
+    cathode: "H⁺ ions move toward the cathode. In a fuller model, hydrogen gas can form here.",
+    anode: "Cl⁻ ions move toward the anode.",
+    afterBehavior: "Although molecular, it dissociates strongly in water."
+  },
+  naoh: {
+    name: "NaOH",
+    display: "Sodium hydroxide (NaOH)",
+    type: "Strong base",
+    formula: "NaOH",
+    beforeEquation: "NaOH",
+    afterEquation: "NaOH → Na⁺ + OH⁻",
+    dissociates: true,
+    conducts: "strong",
+    electrolysis: true,
+    ions: [
+      {label:"Na⁺", kind:"cation"},
+      {label:"OH⁻", kind:"anion"}
+    ],
+    beforeUnits: [
+      {label:"NaOH", kind:"neutral"},
+      {label:"NaOH", kind:"neutral"},
+      {label:"NaOH", kind:"neutral"},
+      {label:"NaOH", kind:"neutral"}
+    ],
+    afterUnits: [
+      {label:"Na⁺", kind:"cation"},
+      {label:"OH⁻", kind:"anion"},
+      {label:"Na⁺", kind:"cation"},
+      {label:"OH⁻", kind:"anion"},
+      {label:"Na⁺", kind:"cation"},
+      {label:"OH⁻", kind:"anion"}
+    ],
+    explanation: "NaOH produces Na⁺ and OH⁻ ions in water. Since the solution contains many mobile ions, it conducts electricity strongly and supports electrolysis.",
+    cathode: "Cations move toward the cathode.",
+    anode: "OH⁻ ions move toward the anode.",
+    afterBehavior: "Forms many mobile ions in water."
+  },
+  sugar: {
+    name: "Sugar",
+    display: "Sugar (C₁₂H₂₂O₁₁)",
+    type: "Molecular compound",
+    formula: "C₁₂H₂₂O₁₁",
+    beforeEquation: "C₁₂H₂₂O₁₁",
+    afterEquation: "Sugar molecules remain intact in water",
+    dissociates: false,
+    conducts: "none",
+    electrolysis: false,
+    ions: [],
+    beforeUnits: [
+      {label:"Sugar", kind:"neutral"},
+      {label:"Sugar", kind:"neutral"},
+      {label:"Sugar", kind:"neutral"},
+      {label:"Sugar", kind:"neutral"}
+    ],
+    afterUnits: [
+      {label:"Sugar", kind:"neutral"},
+      {label:"Sugar", kind:"neutral"},
+      {label:"Sugar", kind:"neutral"},
+      {label:"Sugar", kind:"neutral"}
+    ],
+    explanation: "Sugar dissolves in water, but it does not dissociate into ions. Because no charged particles are available to move toward the electrodes, the solution does not conduct well and electrolysis does not occur in this model.",
+    cathode: "No significant ion traffic reaches the cathode.",
+    anode: "No significant ion traffic reaches the anode.",
+    afterBehavior: "Dissolves, but stays as neutral molecules."
+  },
+  water: {
+    name: "Distilled Water",
+    display: "Distilled water",
+    type: "Molecular substance",
+    formula: "H₂O",
+    beforeEquation: "H₂O",
+    afterEquation: "Very few H⁺ and OH⁻ ions are present",
+    dissociates: "very little",
+    conducts: "weak",
+    electrolysis: "minimal",
+    ions: [
+      {label:"H⁺", kind:"cation"},
+      {label:"OH⁻", kind:"anion"}
+    ],
+    beforeUnits: [
+      {label:"H₂O", kind:"neutral"},
+      {label:"H₂O", kind:"neutral"},
+      {label:"H₂O", kind:"neutral"},
+      {label:"H₂O", kind:"neutral"}
+    ],
+    afterUnits: [
+      {label:"H₂O", kind:"neutral"},
+      {label:"H₂O", kind:"neutral"},
+      {label:"H⁺", kind:"cation"},
+      {label:"OH⁻", kind:"anion"},
+      {label:"H₂O", kind:"neutral"}
+    ],
+    explanation: "Pure water contains only a very small number of ions, so it conducts poorly. This is useful for showing that water alone does not automatically mean strong conductivity.",
+    cathode: "Only very limited ion motion reaches the cathode.",
+    anode: "Only very limited ion motion reaches the anode.",
+    afterBehavior: "Only a tiny fraction forms ions."
+  }
+};
+
+const state = {
+  currentKey: 'nacl',
+  added: false,
+  running: false,
+  showLabels: true,
+  showEquations: true,
+  voltage: 5,
+  predictions: {
+    dissociates: null,
+    conducts: null,
+    electrolysis: null
+  },
+  particles: [],
+  bubbles: []
+};
+
+const substanceSelect = document.getElementById('substanceSelect');
+const substanceMeta = document.getElementById('substanceMeta');
+const beforeBox = document.getElementById('beforeBox');
+const afterBox = document.getElementById('afterBox');
+const beforeEquation = document.getElementById('beforeEquation');
+const afterEquation = document.getElementById('afterEquation');
+const tankParticles = document.getElementById('tankParticles');
+const explanationBox = document.getElementById('explanationBox');
+const meterFill = document.getElementById('meterFill');
+const bulbLabel = document.getElementById('bulbLabel');
+const bulbIcon = document.getElementById('bulbIcon');
+const conductivityText = document.getElementById('conductivityText');
+const leftReaction = document.getElementById('leftReaction');
+const rightReaction = document.getElementById('rightReaction');
+const predictionFeedback = document.getElementById('predictionFeedback');
+const labelsToggle = document.getElementById('labelsToggle');
+const equationsToggle = document.getElementById('equationsToggle');
+const voltageSlider = document.getElementById('voltageSlider');
+const tank = document.getElementById('tank');
+
+function initSelect(){
+  for (const [key, obj] of Object.entries(substances)){
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = obj.display;
+    substanceSelect.appendChild(opt);
+  }
+  substanceSelect.value = state.currentKey;
+}
+
+function currentSubstance(){
+  return substances[state.currentKey];
+}
+
+function renderMeta(){
+  const s = currentSubstance();
+  const dissText = s.dissociates === true ? "Yes" : s.dissociates === false ? "No" : "Very little";
+  const electroText = s.electrolysis === true ? "Yes" : s.electrolysis === false ? "No" : "Minimal";
+  substanceMeta.innerHTML = `
+    <div><strong>Type:</strong> ${s.type}</div>
+    <div><strong>Formula:</strong> ${s.formula}</div>
+    <div><strong>Dissociates in water:</strong> ${dissText}</div>
+    <div><strong>After water:</strong> ${s.afterBehavior}</div>
+    <div><strong>Electrolysis in this model:</strong> ${electroText}</div>
+  `;
+}
+
+function clearBox(box){
+  box.innerHTML = '';
+}
+
+function placeParticle(parent, x, y, label, kind){
+  const p = document.createElement('div');
+  p.className = `particle ${kind}`;
+  p.style.left = x + 'px';
+  p.style.top = y + 'px';
+  p.textContent = state.showLabels ? label : '';
+  parent.appendChild(p);
+}
+
+function renderBeforeAfter(){
+  const s = currentSubstance();
+  clearBox(beforeBox);
+  clearBox(afterBox);
+
+  const beforePositions = [
+    [18, 22],[118, 38],[58, 100],[168, 110]
+  ];
+  s.beforeUnits.forEach((u, i) => {
+    const [x,y] = beforePositions[i % beforePositions.length];
+    placeParticle(beforeBox, x, y, u.label, u.kind);
+  });
+
+  const afterPositions = [
+    [16, 18],[110, 18],[204, 32],[42, 96],[142, 96],[228, 108]
+  ];
+  s.afterUnits.forEach((u, i) => {
+    const [x,y] = afterPositions[i % afterPositions.length];
+    placeParticle(afterBox, x, y, u.label, u.kind);
+  });
+
+  beforeEquation.textContent = state.showEquations ? s.beforeEquation : '';
+  afterEquation.textContent = state.showEquations ? s.afterEquation : '';
+}
+
+function setConductivity(){
+  const s = currentSubstance();
+  if (!state.added){
+    meterFill.style.width = '0%';
+    bulbLabel.textContent = 'Not added yet';
+    bulbIcon.textContent = '💡';
+    conductivityText.textContent = 'Add a substance to see conductivity.';
+    return;
+  }
+  if (s.conducts === 'strong'){
+    meterFill.style.width = '92%';
+    bulbLabel.textContent = 'Strong conduction';
+    bulbIcon.textContent = '💡';
+    conductivityText.textContent = 'Many mobile ions are present, so the solution conducts strongly.';
+  } else if (s.conducts === 'weak'){
+    meterFill.style.width = '26%';
+    bulbLabel.textContent = 'Weak conduction';
+    bulbIcon.textContent = '💡';
+    conductivityText.textContent = 'Very few ions are present, so conduction is weak.';
+  } else {
+    meterFill.style.width = '4%';
+    bulbLabel.textContent = 'No meaningful conduction';
+    bulbIcon.textContent = '💡';
+    conductivityText.textContent = 'Neutral molecules are present, so the solution does not conduct meaningfully.';
+  }
+}
+
+function setExplanation(){
+  const s = currentSubstance();
+  if (!state.added){
+    explanationBox.textContent = 'Choose a substance, make a prediction, and click Add to Water. The simulator will compare what the particles look like before mixing and after mixing.';
+  } else if (!state.running){
+    explanationBox.textContent = s.explanation;
+  } else {
+    const motionText = s.conducts === 'strong'
+      ? 'The electric field is pulling ions toward opposite electrodes.'
+      : s.conducts === 'weak'
+      ? 'Only limited ion motion is visible because very few ions are present.'
+      : 'No directed particle motion occurs because the dissolved substance remains neutral.';
+    explanationBox.textContent = s.explanation + ' ' + motionText;
+  }
+}
+
+function setReactions(){
+  const s = currentSubstance();
+  leftReaction.innerHTML = `<strong>Cathode:</strong> ${state.added ? s.cathode : 'Waiting for ions.'}`;
+  rightReaction.innerHTML = `<strong>Anode:</strong> ${state.added ? s.anode : 'Waiting for ions.'}`;
+}
+
+function makeTankParticles(){
+  tankParticles.innerHTML = '';
+  state.particles = [];
+  state.bubbles = [];
+  const s = currentSubstance();
+
+  let units = [];
+  if (!state.added){
+    return;
+  }
+
+  if (s.conducts === 'strong'){
+    for (let i = 0; i < 14; i++){
+      const ion = s.ions[i % s.ions.length];
+      units.push({label: ion.label, kind: ion.kind});
+    }
+  } else if (s.conducts === 'weak'){
+    units = [
+      {label:'H₂O', kind:'neutral'},
+      {label:'H₂O', kind:'neutral'},
+      {label:'H⁺', kind:'cation'},
+      {label:'OH⁻', kind:'anion'},
+      {label:'H₂O', kind:'neutral'},
+      {label:'H₂O', kind:'neutral'}
+    ];
+  } else {
+    for (let i = 0; i < 10; i++){
+      units.push({label:'Sugar', kind:'neutral'});
+    }
+  }
+
+  const width = tank.clientWidth;
+  const height = tank.clientHeight;
+  units.forEach((u, i) => {
+    const el = document.createElement('div');
+    el.className = `tank-particle ${u.kind}`;
+    el.textContent = state.showLabels ? u.label : '';
+    tankParticles.appendChild(el);
+
+    const x = 90 + Math.random() * (width - 180);
+    const y = 60 + Math.random() * (height - 140);
+    const vx = (Math.random() - 0.5) * 0.8;
+    const vy = (Math.random() - 0.5) * 0.8;
+
+    state.particles.push({
+      el, label:u.label, kind:u.kind, x, y, vx, vy, w: u.kind === 'neutral' ? 58 : 42, h: 42
+    });
+  });
+  positionTankParticles();
+}
+
+function positionTankParticles(){
+  state.particles.forEach(p => {
+    p.el.style.left = p.x + 'px';
+    p.el.style.top = p.y + 'px';
+    p.el.textContent = state.showLabels ? p.label : '';
+  });
+}
+
+function makeBubble(x, y){
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  b.style.left = x + 'px';
+  b.style.top = y + 'px';
+  tankParticles.appendChild(b);
+  state.bubbles.push({el:b, x:x, y:y, vy: -(0.4 + Math.random()*0.7), life: 120 + Math.random()*60});
+}
+
+function updateBubbles(){
+  state.bubbles.forEach(b => {
+    b.y += b.vy;
+    b.life -= 1;
+    b.el.style.top = b.y + 'px';
+    b.el.style.opacity = Math.max(0, b.life/160);
+  });
+  state.bubbles = state.bubbles.filter(b => {
+    if (b.life <= 0 || b.y < 10){
+      b.el.remove();
+      return false;
+    }
+    return true;
+  });
+}
+
+function animate(){
+  if (!state.running) return;
+  const width = tank.clientWidth;
+  const height = tank.clientHeight;
+  const leftBound = 65;
+  const rightBound = width - 65;
+  const field = 0.08 + state.voltage * 0.03;
+
+  state.particles.forEach((p, idx) => {
+    p.vx += (Math.random() - 0.5) * 0.04;
+    p.vy += (Math.random() - 0.5) * 0.04;
+
+    if (p.kind === 'cation'){
+      p.vx -= field;
+    } else if (p.kind === 'anion'){
+      p.vx += field;
+    } else {
+      p.vx += (Math.random() - 0.5) * 0.02;
+    }
+
+    p.vx = Math.max(-2.6, Math.min(2.6, p.vx));
+    p.vy = Math.max(-1.6, Math.min(1.6, p.vy));
+
+    p.x += p.vx;
+    p.y += p.vy;
+
+    if (p.y < 50){ p.y = 50; p.vy *= -0.9; }
+    if (p.y > height - 60){ p.y = height - 60; p.vy *= -0.9; }
+
+    if (p.kind === 'cation' && p.x < leftBound){
+      p.x = leftBound + Math.random()*16;
+      p.vx = Math.abs(p.vx) * 0.2;
+      if (Math.random() < 0.08 + state.voltage*0.01) makeBubble(58 + Math.random()*22, 280 + Math.random()*100);
+    } else if (p.kind === 'anion' && p.x > rightBound - p.w){
+      p.x = rightBound - p.w - Math.random()*16;
+      p.vx = -Math.abs(p.vx) * 0.2;
+      if (Math.random() < 0.08 + state.voltage*0.01) makeBubble(width - 72 + Math.random()*18, 280 + Math.random()*100);
+    } else {
+      if (p.x < 20){ p.x = 20; p.vx *= -0.9; }
+      if (p.x > width - p.w - 20){ p.x = width - p.w - 20; p.vx *= -0.9; }
+    }
+  });
+
+  positionTankParticles();
+  updateBubbles();
+  requestAnimationFrame(animate);
+}
+
+function refreshAll(){
+  renderMeta();
+  renderBeforeAfter();
+  setConductivity();
+  setExplanation();
+  setReactions();
+  makeTankParticles();
+}
+
+function setPredictionButtonStates(){
+  document.querySelectorAll('.predict').forEach(btn => {
+    const q = btn.dataset.q;
+    const a = btn.dataset.a;
+    btn.classList.toggle('active', state.predictions[q] === a);
+  });
+}
+
+function clearPredictions(){
+  state.predictions = {dissociates:null, conducts:null, electrolysis:null};
+  setPredictionButtonStates();
+  predictionFeedback.textContent = 'Predictions cleared.';
+}
+
+function answerToText(v){
+  if (v === true) return 'yes';
+  if (v === false) return 'no';
+  if (v === 'very little') return 'yes';
+  if (v === 'minimal') return 'yes';
+  if (v === 'strong') return 'yes';
+  if (v === 'weak') return 'yes';
+  if (v === 'none') return 'no';
+  return '';
+}
+
+function checkPredictions(){
+  const s = currentSubstance();
+  const correct = {
+    dissociates: answerToText(s.dissociates),
+    conducts: answerToText(s.conducts),
+    electrolysis: answerToText(s.electrolysis)
+  };
+  let lines = [];
+  let score = 0;
+  for (const q of ['dissociates','conducts','electrolysis']){
+    const guess = state.predictions[q];
+    const ok = guess && guess === correct[q];
+    if (ok) score += 1;
+    const label = q === 'dissociates' ? 'Dissociates'
+                 : q === 'conducts' ? 'Conducts'
+                 : 'Electrolysis';
+    lines.push(`${label}: ${guess ? guess.toUpperCase() : 'NO CHOICE'} | Correct: ${correct[q].toUpperCase()} ${ok ? '✓' : '✗'}`);
+  }
+  predictionFeedback.innerHTML = `<strong>Score: ${score}/3</strong><br>${lines.join('<br>')}`;
+}
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  state.added = true;
+  state.running = false;
+  refreshAll();
+});
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  if (!state.added) state.added = true;
+  setActiveTab('comparison');
+  state.running = true;
+  setExplanation();
+  if (!state.particles.length) makeTankParticles();
+  requestAnimationFrame(animate);
+});
+
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  state.running = false;
+  setExplanation();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state.running = false;
+  state.added = false;
+  tankParticles.innerHTML = '';
+  state.particles = [];
+  state.bubbles = [];
+  clearPredictions();
+  setActiveTab('predictions');
+  setConductivity();
+  setExplanation();
+  setReactions();
+  renderBeforeAfter();
+});
+
+substanceSelect.addEventListener('change', (e) => {
+  state.currentKey = e.target.value;
+  state.running = false;
+  state.added = false;
+  tankParticles.innerHTML = '';
+  state.particles = [];
+  state.bubbles = [];
+  clearPredictions();
+  setActiveTab('predictions');
+  refreshAll();
+});
+
+labelsToggle.addEventListener('click', () => {
+  state.showLabels = !state.showLabels;
+  labelsToggle.classList.toggle('active', state.showLabels);
+  labelsToggle.textContent = state.showLabels ? 'Labels On' : 'Labels Off';
+  renderBeforeAfter();
+  positionTankParticles();
+});
+
+equationsToggle.addEventListener('click', () => {
+  state.showEquations = !state.showEquations;
+  equationsToggle.classList.toggle('active', state.showEquations);
+  equationsToggle.textContent = state.showEquations ? 'Equations On' : 'Equations Off';
+  renderBeforeAfter();
+});
+
+voltageSlider.addEventListener('input', (e) => {
+  state.voltage = Number(e.target.value);
+});
+
+document.querySelectorAll('.predict').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const q = btn.dataset.q;
+    const a = btn.dataset.a;
+    state.predictions[q] = a;
+    setPredictionButtonStates();
+  });
+});
+
+document.getElementById('checkPredictionsBtn').addEventListener('click', checkPredictions);
+document.getElementById('clearPredictionsBtn').addEventListener('click', clearPredictions);
+
+window.addEventListener('resize', () => {
+  if (state.added) makeTankParticles();
+  renderBeforeAfter();
+});
+
+
+
+function setActiveTab(tab){
+  const predBtn = document.getElementById('tabPredictions');
+  const condBtn = document.getElementById('tabConductivity');
+  const compBtn = document.getElementById('tabComparison');
+  const predPanel = document.getElementById('predictionsPanel');
+  const condPanel = document.getElementById('conductivityPanel');
+  const compPanel = document.getElementById('comparisonPanel');
+
+  predBtn.classList.toggle('active', tab === 'predictions');
+  condBtn.classList.toggle('active', tab === 'conductivity');
+  compBtn.classList.toggle('active', tab === 'comparison');
+
+  predPanel.classList.toggle('active', tab === 'predictions');
+  condPanel.classList.toggle('active', tab === 'conductivity');
+  compPanel.classList.toggle('active', tab === 'comparison');
+}
+
+document.getElementById('tabPredictions').addEventListener('click', () => setActiveTab('predictions'));
+document.getElementById('tabConductivity').addEventListener('click', () => setActiveTab('conductivity'));
+document.getElementById('tabComparison').addEventListener('click', () => setActiveTab('comparison'));
+
+initSelect();
+setActiveTab('predictions');
+refreshAll();
+</script>
+</body>
+</html>
