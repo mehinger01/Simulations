@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chem Arcade: Balancing Equations</title>
+  <style>
+    :root {
+      --bg: #070b18;
+      --panel: #101936;
+      --panel-2: #16224a;
+      --text: #f5f7ff;
+      --muted: #aeb9d8;
+      --accent: #47e6ff;
+      --accent-2: #ff4fd8;
+      --good: #3ee27f;
+      --bad: #ff5f76;
+      --warn: #ffd166;
+      --border: rgba(71, 230, 255, 0.28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 79, 216, 0.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(71, 230, 255, 0.20), transparent 35%),
+        linear-gradient(180deg, #090f23 0%, var(--bg) 100%);
+      color: var(--text);
+      padding: 18px;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin: 8px 0 18px;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--accent);
+      font-size: clamp(2rem, 5vw, 4rem);
+      letter-spacing: 1px;
+      text-shadow: 0 0 16px rgba(71, 230, 255, 0.75);
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+    }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .score-card, .panel {
+      background: rgba(16, 25, 54, 0.94);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 0 22px rgba(0,0,0,0.25);
+    }
+
+    .score-card {
+      padding: 12px;
+      text-align: center;
+    }
+
+    .score-card .label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .score-card .value {
+      margin-top: 4px;
+      font-size: 1.55rem;
+      font-weight: 800;
+    }
+
+    .panel {
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .pill {
+      background: var(--panel-2);
+      color: var(--muted);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 0.85rem;
+    }
+
+    .equation {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: clamp(1.25rem, 4vw, 2.25rem);
+      line-height: 1.5;
+      margin: 22px 0;
+      min-height: 88px;
+    }
+
+    .term {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.055);
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 12px;
+    }
+
+    .coeff {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      background: rgba(71, 230, 255, 0.08);
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+
+    .coeff.correct {
+      color: var(--good);
+      border-color: var(--good);
+      background: rgba(62, 226, 127, 0.12);
+    }
+
+    .coeff.wrong {
+      color: var(--bad);
+      border-color: var(--bad);
+      background: rgba(255, 95, 118, 0.13);
+    }
+
+    sub { font-size: 0.58em; }
+
+    .selectors {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+
+    .selector {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .selector-title {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin-bottom: 8px;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 13px;
+      font-weight: 800;
+      color: var(--text);
+      background: var(--panel-2);
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 10px rgba(71, 230, 255, 0.22);
+    }
+
+    button.selected {
+      background: var(--accent);
+      color: #03101a;
+      border-color: var(--accent);
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .primary {
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      color: #050817;
+      border: none;
+    }
+
+    .danger { background: rgba(255, 95, 118, 0.18); border-color: rgba(255, 95, 118, 0.45); }
+    .ghost { background: rgba(255,255,255,0.05); }
+
+    .feedback {
+      min-height: 58px;
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      text-align: center;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .feedback.good {
+      border-color: rgba(62, 226, 127, 0.6);
+      color: var(--good);
+    }
+
+    .feedback.bad {
+      border-color: rgba(255, 95, 118, 0.6);
+      color: var(--bad);
+    }
+
+    .teacher-panel h2 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+
+    .weak-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .weak-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 10px; }
+      .scoreboard { grid-template-columns: repeat(2, 1fr); }
+      .score-card:last-child { grid-column: span 2; }
+      .panel { padding: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Chem Arcade</h1>
+      <div class="subtitle">Balancing Equations — progression, adaptive practice, boss challenges, and teacher insight</div>
+    </header>
+
+    <section class="scoreboard">
+      <div class="score-card"><div class="label">Score</div><div class="value" id="score">0</div></div>
+      <div class="score-card"><div class="label">Streak</div><div class="value" id="streak">0</div></div>
+      <div class="score-card"><div class="label">Lives</div><div class="value" id="lives">3</div></div>
+      <div class="score-card"><div class="label">Level</div><div class="value" id="level">1</div></div>
+      <div class="score-card"><div class="label">Progress</div><div class="value" id="progress">0/0</div></div>
+    </section>
+
+    <section class="panel" id="gamePanel">
+      <div class="meta">
+        <span class="pill" id="qid">Question</span>
+        <span class="pill" id="qtype">Type</span>
+        <span class="pill" id="qdifficulty">Difficulty</span>
+        <span class="pill" id="qmode">Progression Mode</span>
+      </div>
+
+      <div class="equation" id="equation"></div>
+      <div class="selectors" id="selectors"></div>
+
+      <div class="actions">
+        <button class="primary" onclick="checkAnswer()">Check Answer</button>
+        <button class="ghost" onclick="showHint()">Hint</button>
+        <button class="ghost" onclick="skipQuestion()">Skip</button>
+        <button class="danger" onclick="resetGame()">Reset</button>
+      </div>
+
+      <div class="feedback" id="feedback">Choose coefficients, then check your answer.</div>
+    </section>
+
+    <section class="panel teacher-panel">
+      <h2>Teacher / Tutor Snapshot</h2>
+      <p class="small">Tracks common struggle areas by reaction type and difficulty. No student names or personal data are used.</p>
+      <div class="weak-list" id="weakList"></div>
+    </section>
+  </div>
+
+<script>
+const PROGRESSION = {
+  1: ["synthesis", "decomposition"],
+  2: ["single replacement", "double replacement"],
+  3: ["combustion"],
+  4: ["incomplete combustion", "oxidation"]
+};
+
+const BASE_EQUATIONS = [
+  { id: 1, terms: ["C", "H₂O", "CO", "H₂"], operators: ["+", "→", "+"], balanced: "C + H₂O → CO + H₂", coefficients: [1,1,1,1], type: "single replacement", difficulty: 1, level: 2, hint: "This one is already balanced. Count C, H, and O." },
+  { id: 2, terms: ["MgO", "Mg", "O₂"], operators: ["→", "+"], balanced: "2MgO → 2Mg + O₂", coefficients: [2,2,1], type: "decomposition", difficulty: 1, level: 1, hint: "Oxygen becomes O₂, so make the oxygen count even on the reactant side." },
+  { id: 3, terms: ["Al", "O₂", "Al₂O₃"], operators: ["+", "→"], balanced: "4Al + 3O₂ → 2Al₂O₃", coefficients: [4,3,2], type: "synthesis", difficulty: 2, level: 1, hint: "Use 2 Al₂O₃ to get 6 oxygen atoms." },
+  { id: 4, terms: ["Zn", "H₂SO₄", "ZnSO₄", "H₂"], operators: ["+", "→", "+"], balanced: "Zn + H₂SO₄ → ZnSO₄ + H₂", coefficients: [1,1,1,1], type: "single replacement", difficulty: 1, level: 2, hint: "Treat SO₄ as a group because it stays together." },
+  { id: 5, terms: ["Cl₂", "KI", "KCl", "I₂"], operators: ["+", "→", "+"], balanced: "Cl₂ + 2KI → 2KCl + I₂", coefficients: [1,2,2,1], type: "single replacement", difficulty: 2, level: 2, hint: "Cl₂ and I₂ are diatomic. Balance K and I with 2KI." },
+  { id: 6, terms: ["CuCl", "Cu", "Cl₂"], operators: ["→", "+"], balanced: "2CuCl → 2Cu + Cl₂", coefficients: [2,2,1], type: "decomposition", difficulty: 2, level: 1, hint: "Chlorine becomes Cl₂, so you need 2 chlorine atoms." },
+  { id: 7, terms: ["Na", "Cl₂", "NaCl"], operators: ["+", "→"], balanced: "2Na + Cl₂ → 2NaCl", coefficients: [2,1,2], type: "synthesis", difficulty: 1, level: 1, hint: "Cl₂ has 2 chlorine atoms, so make 2 NaCl." },
+  { id: 8, terms: ["Al", "HCl", "AlCl₃", "H₂"], operators: ["+", "→", "+"], balanced: "2Al + 6HCl → 2AlCl₃ + 3H₂", coefficients: [2,6,2,3], type: "single replacement", difficulty: 3, level: 2, hint: "Balance AlCl₃ first, then H₂." },
+  { id: 9, terms: ["Fe₂O₃", "Fe", "O₂"], operators: ["→", "+"], balanced: "2Fe₂O₃ → 4Fe + 3O₂", coefficients: [2,4,3], type: "decomposition", difficulty: 3, level: 1, hint: "Use 2 Fe₂O₃ to make 6 oxygens." },
+  { id: 10, terms: ["P", "O₂", "P₂O₅"], operators: ["+", "→"], balanced: "4P + 5O₂ → 2P₂O₅", coefficients: [4,5,2], type: "synthesis", difficulty: 3, level: 1, hint: "Use 2 P₂O₅ to make 10 oxygen atoms." },
+  { id: 11, terms: ["Mg", "HCl", "MgCl₂", "H₂"], operators: ["+", "→", "+"], balanced: "Mg + 2HCl → MgCl₂ + H₂", coefficients: [1,2,1,1], type: "single replacement", difficulty: 2, level: 2, hint: "MgCl₂ needs 2 chlorine atoms." },
+  { id: 12, terms: ["H₂", "N₂", "NH₃"], operators: ["+", "→"], balanced: "3H₂ + N₂ → 2NH₃", coefficients: [3,1,2], type: "synthesis", difficulty: 2, level: 1, hint: "Start with N₂. Put 2 in front of NH₃." },
+  { id: 13, terms: ["BaCl₂", "H₂SO₄", "BaSO₄", "HCl"], operators: ["+", "→", "+"], balanced: "BaCl₂ + H₂SO₄ → BaSO₄ + 2HCl", coefficients: [1,1,1,2], type: "double replacement", difficulty: 2, level: 2, hint: "Ba and SO₄ are already balanced. Fix HCl." },
+  { id: 14, terms: ["CH₄", "O₂", "CO₂", "H₂O"], operators: ["+", "→", "+"], balanced: "CH₄ + 2O₂ → CO₂ + 2H₂O", coefficients: [1,2,1,2], type: "combustion", difficulty: 2, level: 3, hint: "Balance C, then H, then O last." },
+  { id: 15, terms: ["SO₂", "O₂", "SO₃"], operators: ["+", "→"], balanced: "2SO₂ + O₂ → 2SO₃", coefficients: [2,1,2], type: "synthesis", difficulty: 2, level: 1, hint: "Use 2 SO₃ so oxygen totals 6." },
+  { id: 16, terms: ["CH₄", "O₂", "CO", "H₂O"], operators: ["+", "→", "+"], balanced: "2CH₄ + 3O₂ → 2CO + 4H₂O", coefficients: [2,3,2,4], type: "incomplete combustion", difficulty: 4, level: 4, hint: "Balance C and H first, then oxygen." },
+  { id: 17, terms: ["P", "Cl₂", "PCl₃"], operators: ["+", "→"], balanced: "2P + 3Cl₂ → 2PCl₃", coefficients: [2,3,2], type: "synthesis", difficulty: 2, level: 1, hint: "Use 2 PCl₃ to make 6 chlorine atoms." },
+  { id: 18, terms: ["CO", "O₂", "CO₂"], operators: ["+", "→"], balanced: "2CO + O₂ → 2CO₂", coefficients: [2,1,2], type: "oxidation", difficulty: 2, level: 4, hint: "Use 2 CO₂, then match carbon with 2 CO." },
+  { id: 19, terms: ["CH₄", "O₂", "CH₃OH"], operators: ["+", "→"], balanced: "2CH₄ + O₂ → 2CH₃OH", coefficients: [2,1,2], type: "oxidation", difficulty: 4, level: 4, hint: "Use 2 CH₃OH so oxygen can come from O₂." },
+  { id: 20, terms: ["ZnCl₂", "(NH₄)₂S", "ZnS", "NH₄Cl"], operators: ["+", "→", "+"], balanced: "ZnCl₂ + (NH₄)₂S → ZnS + 2NH₄Cl", coefficients: [1,1,1,2], type: "double replacement", difficulty: 3, level: 2, hint: "Keep NH₄ together as a group." }
+];
+
+const EXTRA_EQUATIONS = [
+  { id: 21, terms: ["H₂", "O₂", "H₂O"], operators: ["+", "→"], balanced: "2H₂ + O₂ → 2H₂O", coefficients: [2,1,2], type: "synthesis", difficulty: 1, level: 1, hint: "Balance oxygen first by making 2 water molecules." },
+  { id: 22, terms: ["K", "Br₂", "KBr"], operators: ["+", "→"], balanced: "2K + Br₂ → 2KBr", coefficients: [2,1,2], type: "synthesis", difficulty: 1, level: 1, hint: "Br₂ is diatomic, so make 2 KBr." },
+  { id: 23, terms: ["CaO", "Ca", "O₂"], operators: ["→", "+"], balanced: "2CaO → 2Ca + O₂", coefficients: [2,2,1], type: "decomposition", difficulty: 1, level: 1, hint: "Oxygen leaves as O₂." },
+  { id: 24, terms: ["Li", "O₂", "Li₂O"], operators: ["+", "→"], balanced: "4Li + O₂ → 2Li₂O", coefficients: [4,1,2], type: "synthesis", difficulty: 2, level: 1, hint: "Make 2 Li₂O to use both oxygen atoms." },
+  { id: 25, terms: ["Ag₂O", "Ag", "O₂"], operators: ["→", "+"], balanced: "2Ag₂O → 4Ag + O₂", coefficients: [2,4,1], type: "decomposition", difficulty: 2, level: 1, hint: "Use 2 Ag₂O to make oxygen even." },
+  { id: 26, terms: ["Ca", "Cl₂", "CaCl₂"], operators: ["+", "→"], balanced: "Ca + Cl₂ → CaCl₂", coefficients: [1,1,1], type: "synthesis", difficulty: 1, level: 1, hint: "This one is already balanced." },
+  { id: 27, terms: ["Na₂CO₃", "CaCl₂", "CaCO₃", "NaCl"], operators: ["+", "→", "+"], balanced: "Na₂CO₃ + CaCl₂ → CaCO₃ + 2NaCl", coefficients: [1,1,1,2], type: "double replacement", difficulty: 2, level: 2, hint: "CO₃ stays together. Balance Na and Cl with 2NaCl." },
+  { id: 28, terms: ["Fe", "CuSO₄", "FeSO₄", "Cu"], operators: ["+", "→", "+"], balanced: "Fe + CuSO₄ → FeSO₄ + Cu", coefficients: [1,1,1,1], type: "single replacement", difficulty: 1, level: 2, hint: "This one is already balanced." },
+  { id: 29, terms: ["Pb(NO₃)₂", "KI", "PbI₂", "KNO₃"], operators: ["+", "→", "+"], balanced: "Pb(NO₃)₂ + 2KI → PbI₂ + 2KNO₃", coefficients: [1,2,1,2], type: "double replacement", difficulty: 3, level: 2, hint: "Treat NO₃ as a group. Balance iodide and potassium." },
+  { id: 30, terms: ["Cu", "AgNO₃", "Cu(NO₃)₂", "Ag"], operators: ["+", "→", "+"], balanced: "Cu + 2AgNO₃ → Cu(NO₃)₂ + 2Ag", coefficients: [1,2,1,2], type: "single replacement", difficulty: 3, level: 2, hint: "Copper nitrate has two nitrate groups." },
+  { id: 31, terms: ["C₂H₆", "O₂", "CO₂", "H₂O"], operators: ["+", "→", "+"], balanced: "2C₂H₆ + 7O₂ → 4CO₂ + 6H₂O", coefficients: [2,7,4,6], type: "combustion", difficulty: 3, level: 3, hint: "Balance C, then H, then double everything to avoid fractional O₂." },
+  { id: 32, terms: ["C₃H₈", "O₂", "CO₂", "H₂O"], operators: ["+", "→", "+"], balanced: "C₃H₈ + 5O₂ → 3CO₂ + 4H₂O", coefficients: [1,5,3,4], type: "combustion", difficulty: 3, level: 3, hint: "3 carbons become 3 CO₂; 8 hydrogens become 4 H₂O." },
+  { id: 33, terms: ["C₄H₁₀", "O₂", "CO₂", "H₂O"], operators: ["+", "→", "+"], balanced: "2C₄H₁₀ + 13O₂ → 8CO₂ + 10H₂O", coefficients: [2,13,8,10], type: "combustion", difficulty: 4, level: 3, hint: "Double butane to avoid fractional oxygen." },
+  { id: 34, terms: ["C₂H₄", "O₂", "CO₂", "H₂O"], operators: ["+", "→", "+"], balanced: "C₂H₄ + 3O₂ → 2CO₂ + 2H₂O", coefficients: [1,3,2,2], type: "combustion", difficulty: 2, level: 3, hint: "2 carbons become 2 CO₂; 4 hydrogens become 2 H₂O." },
+  { id: 35, terms: ["C₂H₂", "O₂", "CO₂", "H₂O"], operators: ["+", "→", "+"], balanced: "2C₂H₂ + 5O₂ → 4CO₂ + 2H₂O", coefficients: [2,5,4,2], type: "combustion", difficulty: 4, level: 3, hint: "Double acetylene to avoid fractional O₂." },
+  { id: 36, terms: ["C", "O₂", "CO₂"], operators: ["+", "→"], balanced: "C + O₂ → CO₂", coefficients: [1,1,1], type: "combustion", difficulty: 1, level: 3, hint: "Already balanced." },
+  { id: 37, terms: ["C", "O₂", "CO"], operators: ["+", "→"], balanced: "2C + O₂ → 2CO", coefficients: [2,1,2], type: "incomplete combustion", difficulty: 3, level: 4, hint: "O₂ has two oxygen atoms, so make 2 CO." },
+  { id: 38, terms: ["C₂H₆", "O₂", "CO", "H₂O"], operators: ["+", "→", "+"], balanced: "2C₂H₆ + 5O₂ → 4CO + 6H₂O", coefficients: [2,5,4,6], type: "incomplete combustion", difficulty: 4, level: 4, hint: "Balance C and H first, then oxygen." },
+  { id: 39, terms: ["SO₂", "O₂", "SO₃"], operators: ["+", "→"], balanced: "2SO₂ + O₂ → 2SO₃", coefficients: [2,1,2], type: "oxidation", difficulty: 3, level: 4, hint: "Use 2 SO₃ to make oxygen count work." },
+  { id: 40, terms: ["NO", "O₂", "NO₂"], operators: ["+", "→"], balanced: "2NO + O₂ → 2NO₂", coefficients: [2,1,2], type: "oxidation", difficulty: 3, level: 4, hint: "Use 2 NO₂, then match nitrogen with 2 NO." }
+];
+
+const EQUATIONS = [...BASE_EQUATIONS, ...EXTRA_EQUATIONS];
+
+const Engine = {
+  questions: EQUATIONS,
+  current: null,
+  userCoefficients: [],
+  usedIds: new Set(),
+  score: 0,
+  streak: 0,
+  lives: 3,
+  level: 1,
+  totalAnswered: 0,
+  mistakesByType: {},
+  mistakesByDifficulty: {},
+  attemptsByQuestion: {},
+
+  reset() {
+    this.current = null;
+    this.userCoefficients = [];
+    this.usedIds = new Set();
+    this.score = 0;
+    this.streak = 0;
+    this.lives = 3;
+    this.level = 1;
+    this.totalAnswered = 0;
+    this.mistakesByType = {};
+    this.mistakesByDifficulty = {};
+    this.attemptsByQuestion = {};
+    this.loadQuestion(this.pickNextQuestion());
+  },
+
+  pickNextQuestion() {
+    const remaining = this.questions.filter(q => !this.usedIds.has(q.id));
+    if (remaining.length === 0) return null;
+
+    const shouldBoss = this.totalAnswered > 0 && (this.streak >= 6 || this.totalAnswered % 12 === 0);
+    if (shouldBoss) {
+      const boss = remaining.filter(q => q.level === 4 || q.difficulty >= 4);
+      if (boss.length) return randomChoice(boss);
+    }
+
+    const allowedTypes = PROGRESSION[this.level] || [];
+    let candidates = remaining.filter(q =>
+      allowedTypes.some(type => q.type.includes(type))
+    );
+
+    const weak = this.getWeakestType();
+    if (weak && this.totalAnswered >= 3) {
+      const targeted = candidates.filter(q => q.type.includes(weak));
+      if (targeted.length) candidates = targeted;
+    }
+
+    if (!candidates.length) {
+      candidates = remaining.filter(q => q.level <= this.level);
+    }
+
+    if (!candidates.length) candidates = remaining;
+
+    candidates.sort((a, b) => a.difficulty - b.difficulty);
+    return randomChoice(candidates.slice(0, Math.min(candidates.length, 8)));
+  },
+
+  loadQuestion(question) {
+    if (!question) {
+      renderEndGame();
+      return;
+    }
+
+    this.current = question;
+    this.usedIds.add(question.id);
+    this.userCoefficients = new Array(question.coefficients.length).fill(null);
+    renderQuestion();
+    renderStats();
+    renderTeacherSnapshot();
+    setFeedback("Choose coefficients, then check your answer.", "");
+  },
+
+  setCoefficient(index, value) {
+    this.userCoefficients[index] = value;
+    renderQuestion();
+  },
+
+  checkAnswer() {
+    if (!this.current) return;
+
+    if (this.userCoefficients.some(v => v === null)) {
+      setFeedback("Choose a coefficient for every blank first.", "bad");
+      return;
+    }
+
+    const correct = this.current.coefficients.every((v, i) => v === this.userCoefficients[i]);
+    this.attemptsByQuestion[this.current.id] = (this.attemptsByQuestion[this.current.id] || 0) + 1;
+
+    if (correct) {
+      this.score += 100 + this.current.difficulty * 25 + this.streak * 10;
+      this.streak += 1;
+      this.totalAnswered += 1;
+
+      if (this.totalAnswered >= 4 && this.level < 2) this.level = 2;
+      if (this.totalAnswered >= 10 && this.level < 3) this.level = 3;
+      if (this.totalAnswered >= 18 && this.level < 4) this.level = 4;
+      if (this.streak >= 4 && this.level < 3) this.level = 3;
+
+      setFeedback("Correct! Balanced equation: " + this.current.balanced, "good");
+      renderQuestion(true, false);
+      renderStats();
+
+      setTimeout(() => this.loadQuestion(this.pickNextQuestion()), 1000);
+    } else {
+      this.streak = 0;
+      this.lives -= 1;
+      this.trackMistake(this.current);
+      setFeedback("Not yet. Hint: " + this.current.hint, "bad");
+      renderQuestion(false, true);
+      renderStats();
+      renderTeacherSnapshot();
+
+      if (this.lives <= 0) {
+        setTimeout(() => renderEndGame(), 700);
+      }
+    }
+  },
+
+  trackMistake(question) {
+    const mainType = question.type.split("/")[0].trim();
+    this.mistakesByType[mainType] = (this.mistakesByType[mainType] || 0) + 1;
+    this.mistakesByDifficulty[question.difficulty] = (this.mistakesByDifficulty[question.difficulty] || 0) + 1;
+  },
+
+  getWeakestType() {
+    const entries = Object.entries(this.mistakesByType);
+    if (!entries.length) return null;
+    entries.sort((a, b) => b[1] - a[1]);
+    return entries[0][0];
+  },
+
+  skip() {
+    if (!this.current) return;
+    this.streak = 0;
+    this.lives -= 1;
+    this.trackMistake(this.current);
+    this.totalAnswered += 1;
+    if (this.lives <= 0) {
+      renderEndGame();
+      return;
+    }
+    this.loadQuestion(this.pickNextQuestion());
+  }
+};
+
+function randomChoice(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function toHTMLFormula(text) {
+  const subMap = {
+    "0":"₀", "1":"₁", "2":"₂", "3":"₃", "4":"₄",
+    "5":"₅", "6":"₆", "7":"₇", "8":"₈", "9":"₉"
+  };
+
+  let output = "";
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (Object.values(subMap).includes(char)) {
+      output += "<sub>" + Object.keys(subMap).find(k => subMap[k] === char) + "</sub>";
+    } else {
+      output += char;
+    }
+  }
+  return output;
+}
+
+function renderQuestion(forceCorrect = false, forceWrong = false) {
+  const q = Engine.current;
+  if (!q) return;
+
+  document.getElementById("qid").textContent = "Question #" + q.id;
+  document.getElementById("qtype").textContent = "Type: " + q.type;
+  document.getElementById("qdifficulty").textContent = "Difficulty: " + q.difficulty;
+  document.getElementById("qmode").textContent = Engine.totalAnswered > 0 && (Engine.streak >= 6 || Engine.totalAnswered % 12 === 0) ? "Boss Ready" : "Progression Mode";
+
+  const equation = document.getElementById("equation");
+  equation.innerHTML = "";
+
+  q.terms.forEach((term, i) => {
+    const coeff = Engine.userCoefficients[i];
+    const coeffClass = forceCorrect ? "correct" : (forceWrong && coeff !== q.coefficients[i] ? "wrong" : "");
+
+    const span = document.createElement("span");
+    span.className = "term";
+    span.innerHTML = '<span class="coeff ' + coeffClass + '">' + (coeff ?? "_") + '</span><span>' + toHTMLFormula(term) + '</span>';
+    equation.appendChild(span);
+
+    if (q.operators[i]) {
+      const op = document.createElement("span");
+      op.textContent = q.operators[i];
+      equation.appendChild(op);
+    }
+  });
+
+  const selectors = document.getElementById("selectors");
+  selectors.innerHTML = "";
+
+  q.terms.forEach((term, i) => {
+    const block = document.createElement("div");
+    block.className = "selector";
+
+    const title = document.createElement("div");
+    title.className = "selector-title";
+    title.innerHTML = "Coefficient for <strong>" + toHTMLFormula(term) + "</strong>";
+    block.appendChild(title);
+
+    const buttons = document.createElement("div");
+    buttons.className = "buttons";
+
+    for (let n = 1; n <= 13; n++) {
+      const btn = document.createElement("button");
+      btn.textContent = n;
+      if (Engine.userCoefficients[i] === n) btn.classList.add("selected");
+      btn.onclick = () => Engine.setCoefficient(i, n);
+      buttons.appendChild(btn);
+    }
+
+    block.appendChild(buttons);
+    selectors.appendChild(block);
+  });
+}
+
+function renderStats() {
+  document.getElementById("score").textContent = Engine.score;
+  document.getElementById("streak").textContent = Engine.streak;
+  document.getElementById("lives").textContent = Engine.lives;
+  document.getElementById("level").textContent = Engine.level;
+  document.getElementById("progress").textContent = Engine.usedIds.size + "/" + Engine.questions.length;
+}
+
+function renderTeacherSnapshot() {
+  const list = document.getElementById("weakList");
+  list.innerHTML = "";
+
+  const cards = [
+    ["Current Level", describeLevel(Engine.level)],
+    ["Weakest Reaction Type", Engine.getWeakestType() || "None yet"],
+    ["Mistakes by Type", formatObject(Engine.mistakesByType)],
+    ["Mistakes by Difficulty", formatObject(Engine.mistakesByDifficulty)],
+    ["Suggested Next Move", getSuggestion()]
+  ];
+
+  cards.forEach(([title, body]) => {
+    const card = document.createElement("div");
+    card.className = "weak-card";
+    card.innerHTML = "<strong>" + title + "</strong><div class='small'>" + body + "</div>";
+    list.appendChild(card);
+  });
+}
+
+function describeLevel(level) {
+  if (level === 1) return "Foundations: synthesis and decomposition";
+  if (level === 2) return "Core balancing: single and double replacement";
+  if (level === 3) return "Multi-step combustion";
+  return "Boss/transfer: incomplete combustion and oxidation";
+}
+
+function formatObject(obj) {
+  const entries = Object.entries(obj);
+  if (!entries.length) return "None yet";
+  return entries.map(([k, v]) => k + ": " + v).join("<br>");
+}
+
+function getSuggestion() {
+  const weak = Engine.getWeakestType();
+  if (!weak) return "Keep building fluency. No clear weak-area pattern yet.";
+  return "Give 2–3 more " + weak + " problems before moving on.";
+}
+
+function setFeedback(message, type) {
+  const box = document.getElementById("feedback");
+  box.textContent = message;
+  box.className = "feedback";
+  if (type) box.classList.add(type);
+}
+
+function showHint() {
+  if (!Engine.current) return;
+  setFeedback(Engine.current.hint, "");
+}
+
+function checkAnswer() {
+  Engine.checkAnswer();
+}
+
+function skipQuestion() {
+  Engine.skip();
+}
+
+function resetGame() {
+  Engine.reset();
+}
+
+function renderEndGame() {
+  const panel = document.getElementById("gamePanel");
+  panel.innerHTML = `
+    <div class="meta">
+      <span class="pill">Game Complete</span>
+      <span class="pill">Score: ${Engine.score}</span>
+      <span class="pill">Answered: ${Engine.totalAnswered}</span>
+    </div>
+    <div class="equation">
+      <span>Final Score: ${Engine.score}</span>
+    </div>
+    <div class="feedback">
+      Weakest area: ${Engine.getWeakestType() || "No clear weak area"}. ${getSuggestion()}
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="location.reload()">Play Again</button>
+    </div>
+  `;
+  renderStats();
+  renderTeacherSnapshot();
+}
+
+window.ChemArcadeBalancing = {
+  dataset: EQUATIONS,
+  engine: Engine,
+  getWeakAreas: () => ({
+    byType: Engine.mistakesByType,
+    byDifficulty: Engine.mistakesByDifficulty,
+    weakestType: Engine.getWeakestType()
+  }),
+  getProgress: () => ({
+    score: Engine.score,
+    streak: Engine.streak,
+    lives: Engine.lives,
+    level: Engine.level,
+    totalAnswered: Engine.totalAnswered,
+    usedIds: Array.from(Engine.usedIds)
+  })
+};
+
+Engine.reset();
+</script>
+</body>
+</html>
