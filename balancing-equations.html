@@ -277,6 +277,121 @@
       .score-card:last-child { grid-column: span 2; }
       .panel { padding: 15px; }
     }
+  
+    .coefficient-input {
+      width: 100%;
+      max-width: 120px;
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 2px solid rgba(71, 230, 255, 0.35);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      font-size: 1.1rem;
+      font-weight: 800;
+      text-align: center;
+      outline: none;
+    }
+
+    .coefficient-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px rgba(71, 230, 255, 0.32);
+    }
+
+    .coefficient-input.has-value {
+      background: rgba(71, 230, 255, 0.12);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .attempt-note {
+      margin-top: 8px;
+      color: var(--warn);
+      font-size: 0.86rem;
+    }
+
+    .celebration-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 8, 22, 0.92);
+      z-index: 10000;
+      padding: 20px;
+    }
+
+    .celebration-card {
+      width: min(760px, 96vw);
+      background:
+        radial-gradient(circle at top left, rgba(255, 79, 216, 0.18), transparent 35%),
+        radial-gradient(circle at top right, rgba(71, 230, 255, 0.20), transparent 35%),
+        var(--panel);
+      border: 2px solid var(--accent);
+      border-radius: 24px;
+      padding: 34px 24px;
+      text-align: center;
+      box-shadow: 0 0 36px rgba(71, 230, 255, 0.38);
+    }
+
+    .celebration-trophy {
+      font-size: 4.4rem;
+      margin-bottom: 10px;
+      animation: trophyPulse 0.9s ease-in-out infinite alternate;
+    }
+
+    @keyframes trophyPulse {
+      from { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255, 209, 102, 0.45)); }
+      to { transform: scale(1.12); filter: drop-shadow(0 0 22px rgba(255, 209, 102, 0.9)); }
+    }
+
+    .celebration-title {
+      color: var(--warn);
+      font-size: clamp(1.7rem, 5vw, 3.2rem);
+      font-weight: 900;
+      margin-bottom: 8px;
+      text-shadow: 0 0 18px rgba(255, 209, 102, 0.65);
+    }
+
+    .celebration-rank {
+      color: var(--accent);
+      font-size: clamp(1.2rem, 4vw, 2rem);
+      font-weight: 900;
+      margin: 12px 0;
+    }
+
+    .celebration-score {
+      color: var(--text);
+      font-size: clamp(1.1rem, 4vw, 1.7rem);
+      font-weight: 800;
+      margin: 10px 0;
+    }
+
+    .celebration-detail {
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 12px auto 22px;
+      max-width: 620px;
+    }
+
+    .confetti-piece {
+      position: fixed;
+      width: 8px;
+      height: 14px;
+      top: -20px;
+      z-index: 10001;
+      opacity: 0.95;
+      animation: confettiFall linear forwards;
+      pointer-events: none;
+    }
+
+    @keyframes confettiFall {
+      to {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -320,6 +435,21 @@
       <p class="small">Tracks common struggle areas by reaction type and difficulty. No student names or personal data are used.</p>
       <div class="weak-list" id="weakList"></div>
     </section>
+  </div>
+
+
+  <div class="celebration-overlay" id="celebrationOverlay">
+    <div class="celebration-card">
+      <div class="celebration-trophy" id="celebrationTrophy">🏆</div>
+      <div class="celebration-title" id="celebrationTitle">Module Complete</div>
+      <div class="celebration-rank" id="celebrationRank">Rank</div>
+      <div class="celebration-score" id="celebrationScore">Score</div>
+      <div class="celebration-detail" id="celebrationDetail"></div>
+      <div class="actions">
+        <button class="primary" onclick="location.reload()">Play Again</button>
+        <button class="ghost" onclick="closeCelebration()">Close</button>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -391,6 +521,13 @@ const Engine = {
   mistakesByType: {},
   mistakesByDifficulty: {},
   attemptsByQuestion: {},
+  currentAttempts: 0,
+  maxAttemptsPerQuestion: 3,
+  perfectRun: true,
+  hintsUsed: 0,
+  skippedQuestions: 0,
+  failedQuestions: 0,
+  maxScore: 10000,
 
   reset() {
     this.current = null;
@@ -404,6 +541,11 @@ const Engine = {
     this.mistakesByType = {};
     this.mistakesByDifficulty = {};
     this.attemptsByQuestion = {};
+    this.currentAttempts = 0;
+    this.perfectRun = true;
+    this.hintsUsed = 0;
+    this.skippedQuestions = 0;
+    this.failedQuestions = 0;
     this.loadQuestion(this.pickNextQuestion());
   },
 
@@ -447,6 +589,7 @@ const Engine = {
     this.current = question;
     this.usedIds.add(question.id);
     this.userCoefficients = new Array(question.coefficients.length).fill(null);
+    this.currentAttempts = 0;
     renderQuestion();
     renderStats();
     renderTeacherSnapshot();
@@ -458,6 +601,18 @@ const Engine = {
     renderQuestion();
   },
 
+  clearCoefficient(index) {
+    this.userCoefficients[index] = null;
+    renderQuestion();
+  },
+
+  calculateQuestionScore(attemptNumber) {
+    if (attemptNumber <= 1) return 1000;
+    if (attemptNumber === 2) return 700;
+    if (attemptNumber === 3) return 400;
+    return 0;
+  },
+
   checkAnswer() {
     if (!this.current) return;
 
@@ -467,10 +622,17 @@ const Engine = {
     }
 
     const correct = this.current.coefficients.every((v, i) => v === this.userCoefficients[i]);
-    this.attemptsByQuestion[this.current.id] = (this.attemptsByQuestion[this.current.id] || 0) + 1;
+    this.currentAttempts += 1;
+    this.attemptsByQuestion[this.current.id] = this.currentAttempts;
 
     if (correct) {
-      this.score += 100 + this.current.difficulty * 25 + this.streak * 10;
+      const earned = this.calculateQuestionScore(this.currentAttempts);
+      this.score += earned;
+
+      if (this.currentAttempts > 1) {
+        this.perfectRun = false;
+      }
+
       this.streak += 1;
       this.totalAnswered += 1;
 
@@ -479,7 +641,7 @@ const Engine = {
       if (this.totalAnswered >= 18 && this.level < 4) this.level = 4;
       if (this.streak >= 4 && this.level < 3) this.level = 3;
 
-      setFeedback("Correct! Balanced equation: " + this.current.balanced, "good");
+      setFeedback("Correct! +" + earned + " points. Balanced equation: " + this.current.balanced, "good");
       renderQuestion(true, false);
       renderStats();
 
@@ -487,8 +649,30 @@ const Engine = {
     } else {
       this.streak = 0;
       this.lives -= 1;
+      this.perfectRun = false;
       this.trackMistake(this.current);
-      setFeedback("Not yet. Hint: " + this.current.hint, "bad");
+
+      const attemptsLeft = this.maxAttemptsPerQuestion - this.currentAttempts;
+
+      if (attemptsLeft <= 0) {
+        this.failedQuestions += 1;
+        this.totalAnswered += 1;
+        setFeedback("Max attempts reached. 0 points. Correct answer: " + this.current.balanced, "bad");
+        renderQuestion(false, true);
+        renderStats();
+        renderTeacherSnapshot();
+
+        setTimeout(() => {
+          if (this.lives <= 0) {
+            renderEndGame();
+          } else {
+            this.loadQuestion(this.pickNextQuestion());
+          }
+        }, 1600);
+        return;
+      }
+
+      setFeedback("Not yet. Hint: " + this.current.hint + " Attempts left: " + attemptsLeft, "bad");
       renderQuestion(false, true);
       renderStats();
       renderTeacherSnapshot();
@@ -498,7 +682,6 @@ const Engine = {
       }
     }
   },
-
   trackMistake(question) {
     const mainType = question.type.split("/")[0].trim();
     this.mistakesByType[mainType] = (this.mistakesByType[mainType] || 0) + 1;
@@ -516,6 +699,8 @@ const Engine = {
     if (!this.current) return;
     this.streak = 0;
     this.lives -= 1;
+    this.perfectRun = false;
+    this.skippedQuestions += 1;
     this.trackMistake(this.current);
     this.totalAnswered += 1;
     if (this.lives <= 0) {
@@ -588,6 +773,30 @@ function renderQuestion(forceCorrect = false, forceWrong = false) {
     title.innerHTML = "Coefficient for <strong>" + toHTMLFormula(term) + "</strong>";
     block.appendChild(title);
 
+    const input = document.createElement("input");
+    input.className = "coefficient-input";
+    if (Engine.userCoefficients[i] !== null) {
+      input.value = Engine.userCoefficients[i];
+      input.classList.add("has-value");
+    }
+    input.placeholder = "type #";
+    input.inputMode = "numeric";
+    input.setAttribute("aria-label", "Coefficient for " + term);
+    input.oninput = () => {
+      const raw = input.value.trim();
+      if (raw === "") {
+        Engine.clearCoefficient(i);
+        return;
+      }
+      const parsed = parseInt(raw, 10);
+      if (!Number.isFinite(parsed) || parsed < 1) {
+        Engine.clearCoefficient(i);
+        return;
+      }
+      Engine.setCoefficient(i, parsed);
+    };
+    block.appendChild(input);
+
     const buttons = document.createElement("div");
     buttons.className = "buttons";
 
@@ -597,6 +806,13 @@ function renderQuestion(forceCorrect = false, forceWrong = false) {
       if (Engine.userCoefficients[i] === n) btn.classList.add("selected");
       btn.onclick = () => Engine.setCoefficient(i, n);
       buttons.appendChild(btn);
+    }
+
+    if (Engine.current && Engine.current.id === q.id) {
+      const note = document.createElement("div");
+      note.className = "attempt-note";
+      note.textContent = "Attempts on this question: " + Engine.currentAttempts + " / " + Engine.maxAttemptsPerQuestion;
+      block.appendChild(note);
     }
 
     block.appendChild(buttons);
@@ -660,6 +876,8 @@ function setFeedback(message, type) {
 
 function showHint() {
   if (!Engine.current) return;
+  Engine.hintsUsed += 1;
+  Engine.perfectRun = false;
   setFeedback(Engine.current.hint, "");
 }
 
@@ -675,26 +893,114 @@ function resetGame() {
   Engine.reset();
 }
 
+
+function getRank(score) {
+  if (score >= 10000) return "⚡ MASTER CHEMIST";
+  if (score >= 9000) return "🧠 LAB DIRECTOR";
+  if (score >= 8000) return "⚗️ SENIOR SCIENTIST";
+  if (score >= 7000) return "🔬 RESEARCHER";
+  if (score >= 6000) return "🧪 LAB TECH";
+  return "🧫 APPRENTICE";
+}
+
+function saveHighScore() {
+  const previous = parseInt(localStorage.getItem("balancingHighScore") || "0", 10);
+  if (Engine.score > previous) {
+    localStorage.setItem("balancingHighScore", String(Engine.score));
+  }
+  if (Engine.perfectRun && Engine.score >= 10000) {
+    localStorage.setItem("balancingPerfectAchievement", "true");
+  }
+}
+
+function launchConfetti() {
+  const colors = ["#47e6ff", "#ff4fd8", "#ffd166", "#3ee27f", "#ffffff"];
+  for (let i = 0; i < 180; i++) {
+    const piece = document.createElement("div");
+    piece.className = "confetti-piece";
+    piece.style.left = Math.random() * 100 + "vw";
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDuration = (2.2 + Math.random() * 2.4) + "s";
+    piece.style.animationDelay = (Math.random() * 0.35) + "s";
+    piece.style.transform = "rotate(" + (Math.random() * 360) + "deg)";
+    document.body.appendChild(piece);
+    setTimeout(() => piece.remove(), 5200);
+  }
+}
+
+function showCelebration() {
+  const overlay = document.getElementById("celebrationOverlay");
+  const title = document.getElementById("celebrationTitle");
+  const rank = document.getElementById("celebrationRank");
+  const score = document.getElementById("celebrationScore");
+  const detail = document.getElementById("celebrationDetail");
+  const trophy = document.getElementById("celebrationTrophy");
+
+  const finalRank = getRank(Engine.score);
+  const previousHigh = parseInt(localStorage.getItem("balancingHighScore") || "0", 10);
+  const isNewHigh = Engine.score > previousHigh;
+
+  if (Engine.perfectRun && Engine.score >= 10000) {
+    title.textContent = "PERFECT BALANCE ACHIEVED";
+    trophy.textContent = "🏆";
+    detail.textContent = "Every equation was balanced without misses, skips, or hints. Master Chemist unlocked.";
+    launchConfetti();
+  } else if (isNewHigh) {
+    title.textContent = "NEW HIGH SCORE";
+    trophy.textContent = "🥇";
+    detail.textContent = "Strong run. Your new local high score has been saved in this browser.";
+    launchConfetti();
+  } else {
+    title.textContent = "MODULE COMPLETE";
+    trophy.textContent = "⚗️";
+    detail.textContent = "Review the teacher snapshot below for reaction types or difficulties that need another round.";
+  }
+
+  rank.textContent = finalRank;
+  score.textContent = "Final Score: " + Engine.score + " / 10000";
+  overlay.style.display = "flex";
+
+  saveHighScore();
+}
+
+function closeCelebration() {
+  document.getElementById("celebrationOverlay").style.display = "none";
+}
+
 function renderEndGame() {
+  if (Engine.perfectRun && Engine.totalAnswered === Engine.questions.length && Engine.score === 9000) {
+    Engine.score += 1000;
+  }
+
+  const finalRank = getRank(Engine.score);
+  const previousHigh = parseInt(localStorage.getItem("balancingHighScore") || "0", 10);
+  const highScoreDisplay = Math.max(previousHigh, Engine.score);
+
   const panel = document.getElementById("gamePanel");
   panel.innerHTML = `
     <div class="meta">
       <span class="pill">Game Complete</span>
-      <span class="pill">Score: ${Engine.score}</span>
+      <span class="pill">Score: ${Engine.score} / 10000</span>
+      <span class="pill">Rank: ${finalRank}</span>
       <span class="pill">Answered: ${Engine.totalAnswered}</span>
     </div>
     <div class="equation">
-      <span>Final Score: ${Engine.score}</span>
+      <span>${Engine.perfectRun && Engine.score >= 10000 ? "🏆 Perfect Balance Achieved" : "Final Score: " + Engine.score}</span>
     </div>
     <div class="feedback">
-      Weakest area: ${Engine.getWeakestType() || "No clear weak area"}. ${getSuggestion()}
+      <strong>${finalRank}</strong><br>
+      High score on this device: ${highScoreDisplay}<br>
+      Weakest area: ${Engine.getWeakestType() || "No clear weak area"}. ${getSuggestion()}<br>
+      Hints used: ${Engine.hintsUsed} | Skipped: ${Engine.skippedQuestions} | Failed after max attempts: ${Engine.failedQuestions}
     </div>
     <div class="actions">
       <button class="primary" onclick="location.reload()">Play Again</button>
     </div>
   `;
+
   renderStats();
   renderTeacherSnapshot();
+  showCelebration();
 }
 
 window.ChemArcadeBalancing = {
@@ -711,7 +1017,13 @@ window.ChemArcadeBalancing = {
     lives: Engine.lives,
     level: Engine.level,
     totalAnswered: Engine.totalAnswered,
-    usedIds: Array.from(Engine.usedIds)
+    usedIds: Array.from(Engine.usedIds),
+    maxScore: Engine.maxScore,
+    rank: getRank(Engine.score),
+    perfectRun: Engine.perfectRun,
+    hintsUsed: Engine.hintsUsed,
+    skippedQuestions: Engine.skippedQuestions,
+    failedQuestions: Engine.failedQuestions
   })
 };
 
