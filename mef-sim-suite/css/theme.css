@@ -1,0 +1,44 @@
+:root {
+  --bg: #081629;
+  --panel-grad-start: #102745;
+  --panel-grad-end: #0a1d36;
+  --border: #28507a;
+  --border-soft: #1f3e62;
+  --text: #e8f3ff;
+  --text-muted: #aac0d9;
+  --accent-primary: #24c9ff;
+  --accent-secondary: #ffc25e;
+  --status-ok: #38d67a;
+  --status-warn: #ffc25e;
+  --status-stop: #ff6b6b;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --font: "Inter", "Segoe UI", Roboto, sans-serif;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #102d55, var(--bg) 55%);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
